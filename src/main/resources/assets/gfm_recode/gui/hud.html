@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GFM HUD</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700;800&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: rgba(21, 6, 33, 0.56);
+            --bg-strong: rgba(30, 8, 46, 0.82);
+            --border: rgba(217, 111, 212, 0.24);
+            --border-strong: rgba(217, 111, 212, 0.5);
+            --accent: #d96fd4;
+            --accent-2: #9b45a8;
+            --text: #f4edf9;
+            --text-soft: rgba(244, 237, 249, 0.62);
+            --text-dim: rgba(217, 111, 212, 0.56);
+            --good: #5fe87a;
+            --warn: #ffb347;
+            --bad: #ef4b6c;
+            --blue: #66a9ff;
+            --font-body: 'DM Sans', sans-serif;
+            --font-display: 'Syne', sans-serif;
+            --radius-lg: 12px;
+            --radius-md: 10px;
+            --panel-shadow: 0 10px 28px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+            --panel-backdrop: blur(14px);
+        }
+        * { box-sizing: border-box; user-select: none; }
+        html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; color: var(--text); font-family: var(--font-body); }
+        body { pointer-events: none; }
+        .panel, .draggable { position: absolute; pointer-events: auto; }
+        .glass { background: linear-gradient(180deg, rgba(68, 20, 87, 0.34), rgba(22, 6, 34, 0.58)); border: 1px solid var(--border); border-radius: var(--radius-lg); backdrop-filter: var(--panel-backdrop); box-shadow: var(--panel-shadow); }
+        .draggable { cursor: grab; }
+        .draggable.dragging { cursor: grabbing; }
+        .section-title { font-family: var(--font-display); font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+        #watermark { top: 18px; left: 18px; padding: 0; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.34)); }
+        .wm-row { display: flex; align-items: baseline; gap: 6px; }
+        .wm-name { font-family: var(--font-display); font-size: 20px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .wm-ver { font-family: var(--font-display); font-size: 8px; font-weight: 700; letter-spacing: 3px; color: rgba(214, 153, 221, 0.78); }
+        .wm-line { margin-top: 3px; height: 1px; width: 100%; background: linear-gradient(90deg, rgba(217, 111, 212, 0.48), transparent); }
+        #array-list { top: 18px; right: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 160px; }
+        .mod-item { display: flex; align-items: center; gap: 8px; padding: 5px 14px 5px 10px; border-right: 2px solid var(--accent); border-top-left-radius: 8px; border-bottom-left-radius: 8px; background: rgba(58, 14, 76, 0.34); backdrop-filter: blur(12px); box-shadow: -10px 0 30px rgba(217, 111, 212, 0.08); white-space: nowrap; }
+        .mod-name { font-size: 12px; font-weight: 600; }
+        .mod-info { font-size: 10px; color: var(--accent); opacity: 0.86; }
+        #stats { left: 18px; bottom: 18px; padding: 8px 10px; display: flex; flex-direction: column; min-width: 170px; }
+        .stat-line { display: flex; gap: 8px; align-items: center; font-size: 11px; padding: 3px 2px; border-bottom: 1px solid rgba(255, 255, 255, 0.03); }
+        .stat-line:last-child { border-bottom: 0; }
+        .stat-label { min-width: 70px; color: var(--text-dim); font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; }
+        .stat-value { color: var(--accent); font-weight: 600; }
+        #effects-panel { top: 84px; left: 18px; width: 180px; padding: 10px; }
+        .effect-item { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 5px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+        .effect-item:last-child { border-bottom: 0; padding-bottom: 0; }
+        .effect-name { font-size: 11px; font-weight: 600; }
+        .effect-level, .effect-time { font-size: 10px; color: var(--text-soft); }
+        #custom-scoreboard { top: 108px; right: 18px; min-width: 172px; max-width: 240px; padding: 10px; }
+        .sb-title { font-family: var(--font-display); font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+        .sb-line { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; font-size: 11px; }
+        .sb-label { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sb-score { color: var(--accent); font-weight: 700; }
+        .mc-fragment { display: inline; }
+        #vitals-panel { left: 210px; bottom: 18px; width: 160px; padding: 10px; }
+        .vital-row { margin-bottom: 8px; }
+        .vital-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 10px; }
+        .vital-label { color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; }
+        .vital-value { font-family: var(--font-display); font-size: 11px; font-weight: 700; }
+        .vital-bar { height: 5px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+        .vital-fill { height: 100%; width: 0; border-radius: inherit; transition: width 0.14s ease-out; }
+        #speed-panel { right: 18px; bottom: 188px; width: 168px; padding: 10px; }
+        .speed-main { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .speed-value { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--accent); line-height: 1; }
+        .speed-unit { font-size: 10px; color: var(--text-soft); text-transform: uppercase; letter-spacing: 1px; }
+        .speed-track { height: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; margin-bottom: 10px; }
+        .speed-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--blue), var(--accent)); transition: width 0.12s linear; }
+        .speed-meta { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-soft); }
+        #radar-panel { right: 18px; bottom: 18px; width: 168px; padding: 10px; }
+        #combat-panel { left: 392px; bottom: 18px; width: 178px; padding: 10px; }
+        #inventory-panel { left: 18px; top: 272px; width: 180px; padding: 10px; }
+        #session-panel { right: 18px; top: 308px; width: 198px; padding: 10px; }
+
+        /* ── Song Player ── */
+        #song-player { left: 18px; top: 310px; width: 270px; padding: 12px; }
+        .song-layout { display: grid; grid-template-columns: 58px 1fr; gap: 10px; align-items: center; }
+        .song-art {
+            width: 58px; height: 58px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-strong);
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            box-shadow: 0 8px 20px rgba(0,0,0,0.28);
+            overflow: hidden;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .song-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .song-art-placeholder::after {
+            content: '';
+            position: absolute;
+            inset: 17px;
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 999px;
+        }
+        .song-info { min-width: 0; }
+        .song-title { font-size: 12px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .song-artist { margin-top: 2px; font-size: 10px; color: var(--text-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .song-source { margin-top: 2px; font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+        .song-source-dot { width: 5px; height: 5px; border-radius: 50%; background: #1db954; display: inline-block; }
+        .song-visualizer { margin-top: 10px; height: 36px; display: flex; align-items: flex-end; }
+        .song-visualizer-bars {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 3px;
+            width: 100%;
+            height: 100%;
+        }
+        .song-viz-bar {
+            flex: 1;
+            min-width: 3px;
+            height: 14%;
+            border-radius: 3px 3px 1px 1px;
+            background: linear-gradient(180deg, var(--accent), var(--accent-2));
+            box-shadow: 0 0 8px var(--glow);
+        }
+        .song-visualizer-playing .song-viz-bar {
+            animation: song-viz-pulse 0.65s ease-in-out infinite alternate;
+        }
+        .song-visualizer-playing .song-viz-bar:nth-child(odd) { animation-duration: 0.55s; }
+        .song-visualizer-playing .song-viz-bar:nth-child(3n) { animation-duration: 0.8s; animation-delay: 0.08s; }
+        .song-visualizer-playing .song-viz-bar:nth-child(5n) { animation-duration: 0.5s; animation-delay: 0.12s; }
+        .song-visualizer-paused .song-viz-bar { height: 10% !important; animation: none; }
+        @keyframes song-viz-pulse {
+            from { height: 16%; }
+            to { height: 92%; }
+        }
+        .song-status-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 10px; color: var(--text-soft); }
+        .song-paused-badge { font-size: 9px; padding: 2px 6px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--text-dim); font-weight: 700; letter-spacing: 0.5px; }
+
+        .mini-grid { display: grid; gap: 6px; }
+        .mini-line { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 11px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .mini-line:last-child { border-bottom: 0; }
+        .mini-key { color: var(--text-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; }
+        .mini-value { color: var(--text); font-weight: 700; text-align: right; }
+        .radar-wrap { position: relative; width: 146px; height: 146px; margin: 0 auto; border-radius: 50%; border: 1px solid rgba(217, 111, 212, 0.22); background: radial-gradient(circle at center, rgba(217, 111, 212, 0.16), rgba(217, 111, 212, 0.02) 60%, transparent 61%), rgba(12, 4, 18, 0.46); overflow: hidden; }
+        .radar-ring, .radar-cross { position: absolute; inset: 0; pointer-events: none; }
+        .radar-ring::before, .radar-ring::after { content: ""; position: absolute; inset: 18%; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 50%; }
+        .radar-ring::after { inset: 34%; }
+        .radar-cross::before, .radar-cross::after { content: ""; position: absolute; background: rgba(255, 255, 255, 0.06); }
+        .radar-cross::before { left: 50%; top: 8px; bottom: 8px; width: 1px; transform: translateX(-50%); }
+        .radar-cross::after { top: 50%; left: 8px; right: 8px; height: 1px; transform: translateY(-50%); }
+        .radar-player { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px rgba(217, 111, 212, 0.42); transform: translate(-50%, -50%); }
+        .radar-entry { position: absolute; width: 8px; height: 8px; border-radius: 50%; transform: translate(-50%, -50%); }
+        .radar-entry.player { background: var(--good); }
+        .radar-entry.mob { background: var(--warn); }
+        #custom-hotbar { left: 50%; bottom: 18px; transform: translateX(-50%); padding: 8px; display: flex; align-items: flex-end; gap: 6px; }
+        .hotbar-grid { display: flex; gap: 6px; }
+        .hotbar-slot { position: relative; width: 48px; height: 48px; border-radius: var(--radius-md); padding: 6px; background: rgba(17, 5, 27, 0.62); border: 1px solid rgba(255, 255, 255, 0.06); display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+        .hotbar-slot.active { border-color: var(--border-strong); box-shadow: inset 0 0 0 1px rgba(217, 111, 212, 0.16), 0 0 18px rgba(217, 111, 212, 0.1); background: rgba(45, 11, 62, 0.78); }
+        .slot-index { position: absolute; top: 4px; left: 6px; font-size: 8px; font-weight: 700; color: var(--text-dim); letter-spacing: 0.8px; }
+        .slot-name { margin-top: 2px; font-size: 8px; line-height: 1.1; font-weight: 700; color: var(--text); word-break: break-word; text-align: center; }
+        .slot-empty { color: rgba(255, 255, 255, 0.16); font-size: 18px; text-align: center; margin-top: 10px; }
+        .slot-icon { width: 24px; height: 24px; align-self: center; margin-top: 8px; image-rendering: pixelated; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35)); }
+        .slot-meta { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 9px; color: var(--text-soft); margin-top: auto; }
+        .slot-bar { position: absolute; left: 6px; right: 6px; bottom: 4px; height: 3px; background: rgba(255, 255, 255, 0.08); border-radius: 999px; overflow: hidden; }
+        .slot-bar-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--bad), var(--warn), var(--good)); }
+        .offhand-wrap { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+        .offhand-label { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim); font-weight: 700; }
+        #notification-container { position: fixed; right: 18px; bottom: 18px; display: flex; flex-direction: column; gap: 8px; z-index: 1000; pointer-events: none; }
+        #browser-esp-layer { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 900; }
+        .browser-esp-box { position: absolute; border: 2px solid rgba(255, 255, 255, 0.92); border-radius: 4px; background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015)); box-shadow: 0 0 18px rgba(255,255,255,0.2); }
+        .browser-esp-label { position: absolute; left: 0; top: -6px; transform: translateY(-100%); padding: 2px 6px; border-radius: 6px; background: rgba(9, 8, 14, 0.82); border: 1px solid rgba(255,255,255,0.14); color: #fff; font-size: 10px; font-weight: 700; white-space: nowrap; }
+        .notification { min-width: 180px; max-width: 260px; padding: 10px 12px; border-left: 2px solid var(--accent); border-radius: 10px; background: rgba(45, 10, 60, 0.86); backdrop-filter: blur(14px); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24); pointer-events: auto; animation: notif-in 0.18s ease-out; }
+        .notification.hiding { animation: notif-out 0.18s ease-in forwards; }
+        .notification.info { border-left-color: #00bcd4; }
+        .notification.success { border-left-color: var(--good); }
+        .notification.warning { border-left-color: var(--warn); }
+        .notification.alert { border-left-color: var(--bad); }
+        .notification-title { font-family: var(--font-display); font-size: 11px; font-weight: 700; color: var(--accent); margin-bottom: 3px; }
+        .notification-message { font-size: 10px; color: var(--text-soft); }
+        @keyframes notif-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes notif-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(24px); } }
+
+        /* Themes */
+        const HUD_THEMES_PLACEHOLDER = 1;
+    </style>
+</head>
+<body>
+<div id="browser-esp-layer"></div>
+<div id="watermark" class="draggable">
+    <div class="wm-row"><div class="wm-name">GFM RECODE</div><div class="wm-ver">V2.0</div></div>
+    <div class="wm-line"></div>
+</div>
+<div id="array-list" class="draggable"></div>
+<div id="effects-panel" class="glass panel draggable"><div class="section-title">Effects</div><div id="effects-list"></div></div>
+<div id="custom-scoreboard" class="glass panel draggable"><div id="scoreboard-title" class="sb-title">Scoreboard</div><div id="scoreboard-lines"></div></div>
+<div id="stats" class="glass panel draggable">
+    <div id="line-coords" class="stat-line"><span class="stat-label">XYZ</span><span id="pos" class="stat-value">-</span></div>
+    <div id="line-fps" class="stat-line"><span class="stat-label">FPS</span><span id="fps" class="stat-value">-</span></div>
+    <div id="line-speed" class="stat-line"><span class="stat-label">Speed</span><span id="speed" class="stat-value">-</span></div>
+    <div id="line-ping" class="stat-line"><span class="stat-label">Ping</span><span id="ping" class="stat-value">-</span></div>
+    <div id="line-server" class="stat-line"><span class="stat-label">Server</span><span id="server" class="stat-value">-</span></div>
+    <div id="line-biome" class="stat-line"><span class="stat-label">Biome</span><span id="biome" class="stat-value">-</span></div>
+    <div id="line-direction" class="stat-line"><span class="stat-label">Facing</span><span id="direction" class="stat-value">-</span></div>
+    <div id="line-time" class="stat-line"><span class="stat-label">Time</span><span id="time" class="stat-value">-</span></div>
+    <div id="line-tps" class="stat-line"><span class="stat-label">TPS</span><span id="tps" class="stat-value">-</span></div>
+    <div id="line-durability" class="stat-line"><span class="stat-label">Durability</span><span id="durability" class="stat-value">-</span></div>
+    <div id="line-memory" class="stat-line"><span class="stat-label">Memory</span><span id="memory" class="stat-value">-</span></div>
+</div>
+<div id="vitals-panel" class="glass panel draggable">
+    <div class="section-title">Vitals</div>
+    <div class="vital-row"><div class="vital-top"><span class="vital-label">Health</span><span id="v-health-text" class="vital-value" style="color:var(--good)">0/0</span></div><div class="vital-bar"><div id="v-health-fill" class="vital-fill" style="background:linear-gradient(90deg,var(--bad),var(--good))"></div></div></div>
+    <div class="vital-row"><div class="vital-top"><span class="vital-label">Armor</span><span id="v-armor-text" class="vital-value" style="color:var(--blue)">0/20</span></div><div class="vital-bar"><div id="v-armor-fill" class="vital-fill" style="background:var(--blue)"></div></div></div>
+    <div class="vital-row"><div class="vital-top"><span class="vital-label">Food</span><span id="v-food-text" class="vital-value" style="color:var(--warn)">0/20</span></div><div class="vital-bar"><div id="v-food-fill" class="vital-fill" style="background:var(--warn)"></div></div></div>
+    <div class="vital-row"><div class="vital-top"><span class="vital-label">Air</span><span id="v-air-text" class="vital-value" style="color:var(--accent)">0/0</span></div><div class="vital-bar"><div id="v-air-fill" class="vital-fill" style="background:var(--accent)"></div></div></div>
+    <div class="vital-row" style="margin-bottom:0"><div class="vital-top"><span class="vital-label">XP</span><span id="v-xp-text" class="vital-value" style="color:var(--accent)">0</span></div><div class="vital-bar"><div id="v-xp-fill" class="vital-fill" style="background:linear-gradient(90deg,var(--accent-2),var(--accent))"></div></div></div>
+</div>
+<div id="speed-panel" class="glass panel draggable">
+    <div class="section-title">Speed</div>
+    <div class="speed-main">
+        <div><div id="speedometer-value" class="speed-value">0.00</div><div class="speed-unit">blocks / sec</div></div>
+        <div style="text-align:right"><div id="world-weather" class="speed-unit">Clear</div><div id="world-day" class="speed-unit">Day 1</div></div>
+    </div>
+    <div class="speed-track"><div id="speedometer-fill" class="speed-fill"></div></div>
+    <div class="speed-meta"><span id="attack-cooldown">Attack 0%</span><span id="world-dimension">overworld</span></div>
+</div>
+<div id="radar-panel" class="glass panel draggable">
+    <div class="section-title">Radar</div>
+    <div class="radar-wrap"><div class="radar-ring"></div><div class="radar-cross"></div><div class="radar-player"></div><div id="radar-entries"></div></div>
+</div>
+<div id="combat-panel" class="glass panel draggable">
+    <div class="section-title">Combat</div>
+    <div class="mini-grid">
+        <div class="mini-line"><span class="mini-key">Attack</span><span id="combat-attack" class="mini-value">0%</span></div>
+        <div class="mini-line"><span class="mini-key">HurtTime</span><span id="combat-hurt" class="mini-value">0</span></div>
+        <div class="mini-line"><span class="mini-key">Players 6m</span><span id="combat-players" class="mini-value">0</span></div>
+        <div class="mini-line"><span class="mini-key">Closest</span><span id="combat-closest" class="mini-value">-</span></div>
+        <div class="mini-line"><span class="mini-key">AntiCheat</span><span id="combat-ac" class="mini-value">Vanilla</span></div>
+    </div>
+</div>
+<div id="inventory-panel" class="glass panel draggable">
+    <div class="section-title">Inventory</div>
+    <div class="mini-grid">
+        <div class="mini-line"><span class="mini-key">Totems</span><span id="inv-totems" class="mini-value">0</span></div>
+        <div class="mini-line"><span class="mini-key">Crystals</span><span id="inv-crystals" class="mini-value">0</span></div>
+        <div class="mini-line"><span class="mini-key">Gapples</span><span id="inv-gaps" class="mini-value">0</span></div>
+        <div class="mini-line"><span class="mini-key">Pearls</span><span id="inv-pearls" class="mini-value">0</span></div>
+        <div class="mini-line"><span class="mini-key">XP Bottles</span><span id="inv-xp" class="mini-value">0</span></div>
+    </div>
+</div>
+<div id="session-panel" class="glass panel draggable">
+    <div class="section-title">Session</div>
+    <div class="mini-grid">
+        <div class="mini-line"><span class="mini-key">Config</span><span id="session-config" class="mini-value">-</span></div>
+        <div class="mini-line"><span class="mini-key">Mode</span><span id="session-mode" class="mini-value">-</span></div>
+        <div class="mini-line"><span class="mini-key">Weather</span><span id="session-weather" class="mini-value">-</span></div>
+        <div class="mini-line"><span class="mini-key">Dimension</span><span id="session-dimension" class="mini-value">-</span></div>
+        <div class="mini-line"><span class="mini-key">Day</span><span id="session-day" class="mini-value">-</span></div>
+    </div>
+</div>
+
+<!-- Song Player -->
+<div id="song-player" class="glass panel draggable">
+    <div class="section-title">Now Playing</div>
+    <div class="song-layout">
+        <div id="song-art" class="song-art song-art-placeholder">
+            <img id="song-art-img" src="" alt="" style="display:none">
+        </div>
+        <div class="song-info">
+            <div id="song-title" class="song-title">Song Player</div>
+            <div id="song-artist" class="song-artist">Nicht verbunden</div>
+            <div id="song-source" class="song-source">
+                <span class="song-source-dot" id="song-dot" style="background:#555"></span>
+                <span id="song-source-text">Media</span>
+            </div>
+        </div>
+    </div>
+    <div class="song-visualizer" id="song-visualizer">
+        <div class="song-visualizer-bars" id="song-visualizer-bars"></div>
+    </div>
+</div>
+
+<div id="custom-hotbar" class="glass panel draggable">
+    <div id="hotbar-grid" class="hotbar-grid"></div>
+    <div class="offhand-wrap"><div class="offhand-label">Offhand</div><div id="offhand-slot"></div></div>
+</div>
+<div id="notification-container"></div>
+
+<script>
+    let hudSettings = {};
+    let hudState = {
+        stats: {}, hotbar: { selectedSlot: 0, slots: [], offhand: { empty: true } },
+        scoreboard: { title: '', entries: [] }, effects: [], vitals: {},
+        radar: { yaw: 0, entries: [] }, speedometer: { value: 0, max: 12, attackCooldown: 0 },
+        world: {}, combat: {}, inventory: {}, session: {}, songPlayer: { enabled: false }
+    };
+
+    const HUD_THEMES = {
+        APPLE: { '--bg':'rgba(255,255,255,0.18)','--bg-strong':'rgba(255,255,255,0.26)','--border':'rgba(255,255,255,0.22)','--border-strong':'rgba(255,255,255,0.35)','--accent':'#ffffff','--accent-2':'#d8d8de','--text':'#ffffff','--text-soft':'rgba(255,255,255,0.72)','--text-dim':'rgba(255,255,255,0.52)','--good':'#d7f7e0','--warn':'#ffe2b8','--bad':'#ffd2dc','--blue':'#c8e3ff','--font-body':"'Inter',sans-serif",'--font-display':"'Inter',sans-serif",'--radius-lg':'18px','--radius-md':'14px','--panel-backdrop':'blur(20px)','--panel-shadow':'0 16px 40px rgba(0,0,0,0.14)' },
+        AMOLED: { '--bg':'rgba(0,0,0,0.88)','--bg-strong':'rgba(0,0,0,0.94)','--border':'rgba(50,255,120,0.12)','--border-strong':'rgba(50,255,120,0.35)','--accent':'#41ff7a','--accent-2':'#119f42','--text':'#e8ffee','--text-soft':'rgba(201,255,217,0.7)','--text-dim':'rgba(65,255,122,0.54)','--good':'#41ff7a','--warn':'#f7a93b','--bad':'#ff4d6d','--blue':'#41ff7a','--font-body':"'JetBrains Mono',monospace",'--font-display':"'JetBrains Mono',monospace",'--radius-lg':'4px','--radius-md':'2px','--panel-backdrop':'blur(2px)','--panel-shadow':'0 0 0 1px rgba(65,255,122,0.06)' },
+        KRYPTON: { '--bg':'rgba(12,12,14,0.85)','--bg-strong':'rgba(8,8,10,0.95)','--border':'rgba(0,229,255,0.15)','--border-strong':'rgba(0,229,255,0.4)','--accent':'#00e5ff','--accent-2':'#0088ff','--text':'#ffffff','--text-soft':'rgba(255,255,255,0.8)','--text-dim':'rgba(0,229,255,0.5)','--good':'#00ffa2','--warn':'#ffcc00','--bad':'#ff3366','--blue':'#00e5ff','--font-body':"'JetBrains Mono',monospace",'--font-display':"'VT323',monospace",'--radius-lg':'6px','--radius-md':'4px','--panel-backdrop':'blur(16px)','--panel-shadow':'0 8px 32px rgba(0,0,0,0.5)' },
+        VALORANT: { '--bg':'rgba(18,19,24,0.86)','--bg-strong':'rgba(24,25,32,0.94)','--border':'rgba(255,70,85,0.2)','--border-strong':'rgba(255,70,85,0.48)','--accent':'#ff4655','--accent-2':'#ff7b85','--text':'#ffffff','--text-soft':'rgba(255,255,255,0.72)','--text-dim':'rgba(255,70,85,0.6)','--good':'#9df4be','--warn':'#ffd166','--bad':'#ff4655','--blue':'#ffffff','--font-body':"'Inter',sans-serif",'--font-display':"'Inter',sans-serif",'--radius-lg':'0px','--radius-md':'0px','--panel-backdrop':'blur(8px)','--panel-shadow':'0 16px 36px rgba(0,0,0,0.28)' },
+        CYBERPUNK: { '--bg':'rgba(21,6,33,0.56)','--bg-strong':'rgba(30,8,46,0.82)','--border':'rgba(217,111,212,0.24)','--border-strong':'rgba(217,111,212,0.5)','--accent':'#d96fd4','--accent-2':'#9b45a8','--text':'#f4edf9','--text-soft':'rgba(244,237,249,0.62)','--text-dim':'rgba(217,111,212,0.56)','--good':'#5fe87a','--warn':'#ffb347','--bad':'#ef4b6c','--blue':'#66a9ff','--font-body':"'DM Sans',sans-serif",'--font-display':"'Syne',sans-serif",'--radius-lg':'12px','--radius-md':'10px','--panel-backdrop':'blur(14px)','--panel-shadow':'0 10px 28px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.03)' },
+        VANILLA_PLUS: { '--bg':'rgba(38,30,20,0.76)','--bg-strong':'rgba(54,42,27,0.88)','--border':'rgba(190,155,96,0.28)','--border-strong':'rgba(214,182,126,0.56)','--accent':'#d3b37a','--accent-2':'#8bb56d','--text':'#f8f0da','--text-soft':'rgba(248,240,218,0.72)','--text-dim':'rgba(211,179,122,0.6)','--good':'#8bb56d','--warn':'#e1b45d','--bad':'#c96b57','--blue':'#93b2d8','--font-body':"'VT323',monospace",'--font-display':"'VT323',monospace",'--radius-lg':'6px','--radius-md':'4px','--panel-backdrop':'blur(4px)','--panel-shadow':'0 8px 22px rgba(0,0,0,0.24)' },
+        GLASS_NEON: { '--bg':'rgba(255,255,255,0.08)','--bg-strong':'rgba(18,12,34,0.68)','--border':'rgba(113,240,255,0.26)','--border-strong':'rgba(217,111,212,0.62)','--accent':'#71f0ff','--accent-2':'#d96fd4','--text':'#f7fbff','--text-soft':'rgba(247,251,255,0.68)','--text-dim':'rgba(113,240,255,0.62)','--good':'#7dffb2','--warn':'#ffd36e','--bad':'#ff6b8f','--blue':'#71f0ff','--font-body':"'Inter',sans-serif",'--font-display':"'Syne',sans-serif",'--radius-lg':'16px','--radius-md':'12px','--panel-backdrop':'blur(22px)','--panel-shadow':'0 0 32px rgba(113,240,255,0.12),0 0 24px rgba(217,111,212,0.12)' }
+    };
+
+    const DISPLAY_BY_ID = { watermark:'block','array-list':'flex',stats:'flex','custom-hotbar':'flex','custom-scoreboard':'block','effects-panel':'block','vitals-panel':'block','speed-panel':'block','radar-panel':'block','combat-panel':'block','inventory-panel':'block','session-panel':'block','song-player':'block' };
+
+    function ensureDefaults() {
+        const defaults = { Watermark:true,ArrayList:true,Coordinates:true,FPS:true,Speed:true,Ping:true,Server:true,Biome:true,Direction:true,Time:true,TPS:true,Durability:true,Memory:true,Hotbar:true,Scoreboard:true,Effects:true,Vitals:true,Speedometer:true,Radar:true,'Combat Panel':true,'Inventory Panel':true,'Session Panel':true,'Song Player':true,Theme:'KRYPTON' };
+        Object.entries(defaults).forEach(([k,v]) => { if (hudSettings[k] === undefined) hudSettings[k] = v; });
+    }
+
+    function setVisible(id, visible) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.display = visible === false ? 'none' : (DISPLAY_BY_ID[id] || 'block');
+    }
+
+    function updateHudVisibility() {
+        ensureDefaults();
+        setVisible('watermark', hudSettings.Watermark);
+        setVisible('array-list', hudSettings.ArrayList);
+        setVisible('custom-hotbar', hudSettings.Hotbar);
+        setVisible('custom-scoreboard', hudSettings.Scoreboard);
+        setVisible('effects-panel', hudSettings.Effects);
+        setVisible('vitals-panel', hudSettings.Vitals);
+        setVisible('speed-panel', hudSettings.Speedometer);
+        setVisible('radar-panel', hudSettings.Radar);
+        setVisible('combat-panel', hudSettings['Combat Panel']);
+        setVisible('inventory-panel', hudSettings['Inventory Panel']);
+        setVisible('session-panel', hudSettings['Session Panel']);
+
+        const songPanel = document.getElementById('song-player');
+        if (songPanel) {
+            const on = hudSettings['Song Player'] !== false && (hudState.songPlayer || {}).enabled === true;
+            songPanel.style.display = on ? 'block' : 'none';
+        }
+
+        setVisible('line-coords', hudSettings.Coordinates);
+        setVisible('line-fps', hudSettings.FPS);
+        setVisible('line-speed', hudSettings.Speed);
+        setVisible('line-ping', hudSettings.Ping);
+        setVisible('line-server', hudSettings.Server);
+        setVisible('line-biome', hudSettings.Biome);
+        setVisible('line-direction', hudSettings.Direction);
+        setVisible('line-time', hudSettings.Time);
+        setVisible('line-tps', hudSettings.TPS);
+        setVisible('line-durability', hudSettings.Durability);
+        setVisible('line-memory', hudSettings.Memory);
+        const stats = document.getElementById('stats');
+        if (stats) stats.style.display = Array.from(stats.children).some(c => c.style.display !== 'none') ? 'flex' : 'none';
+    }
+
+    function applyHudTheme() {
+        const name = String(hudSettings.Theme || 'KRYPTON').toUpperCase();
+        const theme = HUD_THEMES[name] || HUD_THEMES.KRYPTON;
+        const root = document.documentElement;
+        Object.entries(theme).forEach(([k,v]) => root.style.setProperty(k, v));
+    }
+
+    async function loadHudSettings() {
+        ensureDefaults();
+        try {
+            const r = await fetch('http://localhost:1337/api/modules');
+            const modules = await r.json();
+            const hud = modules.find(m => m.name === 'HUD');
+            if (hud) hud.settings.forEach(s => { hudSettings[s.name] = s.value; });
+        } catch(e) {}
+        ensureDefaults();
+        applyHudTheme();
+        updateHudVisibility();
+    }
+
+    function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value ?? '-';
+    }
+
+    function compactName(name) {
+        if (!name) return '';
+        const clean = String(name).trim();
+        if (clean.length <= 11) return clean;
+        return clean.split(' ').map(p => p.slice(0,3)).join(' ').slice(0,12);
+    }
+
+    function escapeHtml(v) {
+        return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    const MC_COLOR_MAP = {'0':'#000000','1':'#0000aa','2':'#00aa00','3':'#00aaaa','4':'#aa0000','5':'#aa00aa','6':'#ffaa00','7':'#aaaaaa','8':'#555555','9':'#5555ff','a':'#55ff55','b':'#55ffff','c':'#ff5555','d':'#ff55ff','e':'#ffff55','f':'#ffffff'};
+
+    function minecraftToHtml(input) {
+        const text = String(input ?? '');
+        let color='',bold=false,italic=false,underline=false,strike=false,current='',html='';
+        const flush = () => {
+            if (!current) return;
+            const s = [];
+            if (color) s.push(`color:${color}`);
+            if (bold) s.push('font-weight:700');
+            if (italic) s.push('font-style:italic');
+            if (underline) s.push('text-decoration:underline');
+            if (strike) s.push('text-decoration:line-through');
+            html += `<span class="mc-fragment"${s.length?` style="${s.join(';')}"`:''}>${escapeHtml(current)}</span>`;
+            current='';
+        };
+        for (let i=0;i<text.length;i++) {
+            const c=text[i];
+            if (c==='§'&&i+1<text.length) { flush(); const code=text[++i].toLowerCase(); if(MC_COLOR_MAP[code]){color=MC_COLOR_MAP[code];bold=italic=underline=strike=false;}else if(code==='l')bold=true;else if(code==='o')italic=true;else if(code==='n')underline=true;else if(code==='m')strike=true;else if(code==='r'){color='';bold=italic=underline=strike=false;} continue; }
+            current+=c;
+        }
+        flush();
+        return html||escapeHtml(text.replace(/§./g,''));
+    }
+
+    function renderStats() {
+        const s = hudState.stats||{};
+        setText('fps',s.fps); setText('pos',s.pos); setText('speed',`${s.speed??'0.00'} b/s`);
+        setText('ping',`${s.ping??'-'} ms`); setText('server',s.server); setText('biome',s.biome);
+        setText('direction',s.direction); setText('time',s.time); setText('tps',s.tps);
+        setText('durability',s.durability); setText('memory',s.memory);
+    }
+
+    function setBar(fillId,textId,cur,max,color) {
+        const mv=Math.max(0.0001,Number(max||0)),v=Number(cur||0),pct=Math.max(0,Math.min(100,(v/mv)*100));
+        const fill=document.getElementById(fillId),text=document.getElementById(textId);
+        if(fill)fill.style.width=`${pct}%`;
+        if(text){text.style.color=color;text.textContent=`${v} / ${max}`;}
+    }
+
+    function renderVitals() {
+        const v=hudState.vitals||{};
+        setBar('v-health-fill','v-health-text',Number(v.health||0)+Number(v.absorption||0),Number(v.maxHealth||20)+Number(v.absorption||0),'var(--good)');
+        setBar('v-armor-fill','v-armor-text',v.armor||0,20,'var(--blue)');
+        setBar('v-food-fill','v-food-text',v.food||0,20,'var(--warn)');
+        setBar('v-air-fill','v-air-text',v.air||0,v.maxAir||300,'var(--accent)');
+        const xf=document.getElementById('v-xp-fill');
+        if(xf)xf.style.width=`${Math.max(0,Math.min(100,Number(v.xpProgress||0)*100))}%`;
+        setText('v-xp-text',`LVL ${v.xpLevel||0}`);
+    }
+
+    function renderSpeedometer() {
+        const sp=hudState.speedometer||{},w=hudState.world||{};
+        const max=Math.max(0.1,Number(sp.max||12)),val=Number(sp.value||0);
+        setText('speedometer-value',val.toFixed(2));
+        setText('world-weather',w.weather||'Clear'); setText('world-day',`Day ${w.day||1}`);
+        setText('world-dimension',w.dimension||'overworld');
+        setText('attack-cooldown',`Attack ${Math.round(Number(sp.attackCooldown||0)*100)}%`);
+        const f=document.getElementById('speedometer-fill');
+        if(f)f.style.width=`${Math.max(0,Math.min(100,(val/max)*100))}%`;
+    }
+
+    function renderCombatPanel() {
+        const c=hudState.combat||{};
+        setText('combat-attack',`${Math.round(Number(c.attackCooldown||0)*100)}%`);
+        setText('combat-hurt',c.hurtTime||0); setText('combat-players',c.nearbyPlayers||0);
+        setText('combat-closest',c.closestPlayer??'-'); setText('combat-ac',c.antiCheat||'Vanilla');
+    }
+
+    function renderInventoryPanel() {
+        const i=hudState.inventory||{};
+        setText('inv-totems',i.totems||0); setText('inv-crystals',i.crystals||0);
+        setText('inv-gaps',i.gapples||0); setText('inv-pearls',i.pearls||0); setText('inv-xp',i.xpBottles||0);
+    }
+
+    function renderSessionPanel() {
+        const s=hudState.session||{};
+        setText('session-config',s.config||'-'); setText('session-mode',s.mode||'-');
+        setText('session-weather',s.weather||'-'); setText('session-dimension',s.dimension||'-');
+        setText('session-day',s.day||'-');
+    }
+
+    const VIZ_BAR_COUNT = 20;
+
+    function initSongVisualizerBars() {
+        const wrap = document.getElementById('song-visualizer-bars');
+        if (!wrap || wrap.childElementCount >= VIZ_BAR_COUNT) return;
+        wrap.innerHTML = '';
+        for (let i = 0; i < VIZ_BAR_COUNT; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'song-viz-bar';
+            wrap.appendChild(bar);
+        }
+    }
+
+    function setVisualizerMotion(playing, active) {
+        const viz = document.getElementById('song-visualizer');
+        if (!viz) return;
+        viz.classList.toggle('song-visualizer-playing', active && playing);
+        viz.classList.toggle('song-visualizer-paused', active && !playing);
+    }
+
+    function renderSongPlayer() {
+        initSongVisualizerBars();
+        const song = hudState.songPlayer || {};
+        if (!song.enabled) return;
+
+        const dot = document.getElementById('song-dot');
+        const artImg = document.getElementById('song-art-img');
+        const artDiv = document.getElementById('song-art');
+
+        if (!song.available) {
+            setText('song-title', 'Nichts spielt');
+            setText('song-artist', song.reason || 'Spotify- oder Browser-Fenster öffnen');
+            setText('song-source-text', 'Media');
+            if (dot) dot.style.background = '#555';
+            if (artImg) artImg.style.display = 'none';
+            if (artDiv) artDiv.classList.add('song-art-placeholder');
+            setVisualizerMotion(false, false);
+            return;
+        }
+
+        if (dot) dot.style.background = '#1db954';
+
+        const source = song.source || 'Media';
+        setText('song-title', song.title || 'Unknown');
+        setText('song-artist', song.artist || '');
+        setText('song-source-text', song.status === 'Paused' ? `Paused · ${source}` : source);
+
+        if (artImg) artImg.style.display = 'none';
+        if (artDiv) artDiv.classList.add('song-art-placeholder');
+
+        setVisualizerMotion(song.status !== 'Paused', true);
+    }
+
+    function renderEffects() {
+        const c=document.getElementById('effects-list');
+        if(!c)return;
+        const ef=hudState.effects||[];
+        if(!ef.length){c.innerHTML=`<div class="effect-item"><div class="effect-name">No active effects</div><div class="effect-time">00:00</div></div>`;return;}
+        c.innerHTML=ef.map(e=>`<div class="effect-item"><div class="effect-name">${e.name}</div><div class="effect-time">${e.duration}</div><div class="effect-level">Level ${e.amplifier}</div><div class="effect-level">${e.ambient?'Ambient':'Active'}</div></div>`).join('');
+    }
+
+    function createSlot(stack, label) {
+        const slot=document.createElement('div');
+        slot.className=`hotbar-slot${stack&&stack.selected?' active':''}`;
+        const si=document.createElement('div'); si.className='slot-index'; si.textContent=label; slot.appendChild(si);
+        if(!stack||stack.empty){const e=document.createElement('div');e.className='slot-empty';e.textContent='+';slot.appendChild(e);return slot;}
+        const icon=document.createElement('img'); icon.className='slot-icon'; icon.alt=stack.name||'Item';
+        icon.src=`http://localhost:1337/api/item-icon?id=${encodeURIComponent(stack.itemId||'minecraft:barrier')}`;
+        slot.appendChild(icon);
+        const name=document.createElement('div'); name.className='slot-name'; name.textContent=compactName(stack.name);
+        icon.onerror=()=>{icon.style.display='none';name.style.marginTop='10px';};
+        slot.appendChild(name);
+        const meta=document.createElement('div'); meta.className='slot-meta';
+        meta.innerHTML=`<span>${stack.count>1?stack.count:''}</span><span>${stack.damageable?Math.max(0,stack.maxDamage-stack.damage):''}</span>`;
+        slot.appendChild(meta);
+        if(stack.damageable){const bar=document.createElement('div');bar.className='slot-bar';const fill=document.createElement('div');fill.className='slot-bar-fill';fill.style.width=`${stack.maxDamage>0?(Math.max(0,stack.maxDamage-stack.damage)/stack.maxDamage)*100:100}%`;bar.appendChild(fill);slot.appendChild(bar);}
+        return slot;
+    }
+
+    function renderHotbar() {
+        const hb=hudState.hotbar||{},grid=document.getElementById('hotbar-grid'),oh=document.getElementById('offhand-slot');
+        if(!grid||!oh)return;
+        grid.innerHTML='';
+        (hb.slots||[]).forEach((s,i)=>grid.appendChild(createSlot(s,String(i+1))));
+        oh.innerHTML=''; oh.appendChild(createSlot(hb.offhand||{empty:true},'OF'));
+    }
+
+    function renderScoreboard() {
+        const sb=hudState.scoreboard||{},title=document.getElementById('scoreboard-title');
+        if(title)title.innerHTML=minecraftToHtml(sb.title||'Scoreboard');
+        const lines=document.getElementById('scoreboard-lines'); if(!lines)return;
+        if(!sb.entries||!sb.entries.length){lines.innerHTML=`<div class="sb-line"><span class="sb-label">No sidebar</span><span class="sb-score">-</span></div>`;return;}
+        lines.innerHTML=sb.entries.map(e=>`<div class="sb-line"><span class="sb-label">${minecraftToHtml(e.label||'')}</span><span class="sb-score">${minecraftToHtml(e.score||'')}</span></div>`).join('');
+    }
+
+    function renderRadar() {
+        const radar=hudState.radar||{},c=document.getElementById('radar-entries'); if(!c)return;
+        const yaw=(Number(radar.yaw||0)*Math.PI)/180,entries=radar.entries||[],maxD=48,radius=64;
+        c.innerHTML='';
+        entries.forEach(e=>{
+            const rx=Number(e.x||0),rz=Number(e.z||0);
+            const rx2=rx*Math.cos(-yaw)-rz*Math.sin(-yaw),rz2=rx*Math.sin(-yaw)+rz*Math.cos(-yaw);
+            const px=Math.max(-radius,Math.min(radius,(rx2/maxD)*radius)),py=Math.max(-radius,Math.min(radius,(rz2/maxD)*radius));
+            const dot=document.createElement('div'); dot.className=`radar-entry ${e.type||'mob'}`;
+            dot.style.left=`calc(50% + ${px}px)`; dot.style.top=`calc(50% + ${py}px)`;
+            dot.title=`${e.label||'Entity'} (${e.distance||0})`; c.appendChild(dot);
+        });
+    }
+
+    function renderBrowserEsp() {
+        const layer=document.getElementById('browser-esp-layer'); if(!layer)return;
+        layer.innerHTML='';
+        (hudState.browserEsp||[]).forEach(e=>{
+            const box=document.createElement('div'); box.className='browser-esp-box';
+            box.style.left=`${Math.max(0,Number(e.left||0)*100)}%`; box.style.top=`${Math.max(0,Number(e.top||0)*100)}%`;
+            box.style.width=`${Math.max(0,Number(e.width||0)*100)}%`; box.style.height=`${Math.max(0,Number(e.height||0)*100)}%`;
+            box.style.borderColor=e.color||'rgba(255,255,255,0.92)'; box.style.boxShadow=`0 0 18px ${e.color||'rgba(255,255,255,0.2)'}`;
+            const label=document.createElement('div'); label.className='browser-esp-label';
+            const health=e.health!=null&&e.maxHealth!=null?` | ${e.health}/${e.maxHealth}`:'';
+            label.textContent=`${e.label||e.type||'Entity'} | ${e.distance||0}m${health}`;
+            label.style.borderColor=e.color||'rgba(255,255,255,0.14)'; box.appendChild(label); layer.appendChild(box);
+        });
+    }
+
+    function renderAll() {
+        renderStats(); renderVitals(); renderSpeedometer(); renderCombatPanel();
+        renderInventoryPanel(); renderSessionPanel(); renderEffects();
+        renderHotbar(); renderScoreboard(); renderRadar(); renderBrowserEsp();
+        renderSongPlayer(); updateHudVisibility();
+    }
+
+    window.updateHudState = function(payload) {
+        hudState = Object.assign({}, hudState, payload || {});
+        renderAll();
+    };
+
+    async function updateHudModules() {
+        try {
+            const r=await fetch('http://localhost:1337/api/modules');
+            const modules=await r.json();
+            const hud=modules.find(m=>m.name==='HUD');
+            if(hud)hud.settings.forEach(s=>{hudSettings[s.name]=s.value;});
+            const list=document.getElementById('array-list');
+            if(list){
+                const enabled=modules.filter(m=>m.enabled&&m.name!=='HUD').sort((a,b)=>(b.name+(b.displayInfo||'')).length-(a.name+(a.displayInfo||'')).length);
+                list.innerHTML=enabled.map(m=>`<div class="mod-item"><span class="mod-name">${m.name}</span>${m.displayInfo?`<span class="mod-info">${m.displayInfo}</span>`:''}</div>`).join('');
+            }
+        } catch(e) {}
+        ensureDefaults(); applyHudTheme(); updateHudVisibility();
+    }
+
+    function makeDraggable(el) {
+        if(!el)return;
+        const saved=localStorage.getItem(`pos_${el.id}`);
+        if(saved){try{const d=JSON.parse(saved);el.style.left=d.left;el.style.top=d.top;el.style.right=d.right;el.style.bottom=d.bottom;el.style.transform=d.transform||'none';}catch(e){}}
+        let sx=0,sy=0,dragging=false;
+        const finish=()=>{if(!dragging)return;dragging=false;el.classList.remove('dragging');localStorage.setItem(`pos_${el.id}`,JSON.stringify({left:el.style.left,top:el.style.top,right:el.style.right,bottom:el.style.bottom,transform:el.style.transform}));};
+        el.addEventListener('mousedown',e=>{
+            if(e.button!==0)return;
+            if(e.target.closest('button,a,input,textarea,select'))return;
+            const r=el.getBoundingClientRect();dragging=true;sx=e.clientX;sy=e.clientY;el.classList.add('dragging');el.style.left=`${r.left}px`;el.style.top=`${r.top}px`;el.style.right='auto';el.style.bottom='auto';el.style.transform='none';
+        });
+        document.addEventListener('mousemove',e=>{if(!dragging)return;if((e.buttons&1)===0){finish();return;}const dx=e.clientX-sx,dy=e.clientY-sy;sx=e.clientX;sy=e.clientY;el.style.left=`${el.offsetLeft+dx}px`;el.style.top=`${el.offsetTop+dy}px`;});
+        document.addEventListener('mouseup',finish);
+        window.addEventListener('blur',finish);
+    }
+
+    document.querySelectorAll('.draggable').forEach(makeDraggable);
+
+    function showNotification(title,message,type='info',duration=3000) {
+        const c=document.getElementById('notification-container'); if(!c)return;
+        const n=document.createElement('div'); n.className=`notification ${type}`;
+        n.innerHTML=`<div class="notification-title">${title}</div><div class="notification-message">${message}</div>`;
+        c.appendChild(n);
+        const hide=()=>{n.classList.add('hiding');setTimeout(()=>n.remove(),180);};
+        n.onclick=hide; setTimeout(hide,duration);
+    }
+    window.showNotification=showNotification;
+
+    async function pollNotifications() {
+        try{const r=await fetch('http://localhost:1337/api/notifications');const n=await r.json();n.forEach(n=>showNotification(n.title,n.message,n.type,n.duration));}catch(e){}
+    }
+
+    loadHudSettings();
+    updateHudModules();
+    renderAll();
+    setInterval(updateHudModules, 500);
+    setInterval(pollNotifications, 500);
+    pollNotifications();
+    updateHudVisibility();
+</script>
+</body>
+</html>

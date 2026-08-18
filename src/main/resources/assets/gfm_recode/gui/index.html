@@ -1,0 +1,2260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GFM WebUI - ClickGUI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700;800&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --a1: #D96FD4;
+            --a2: #9B45A8;
+            --glow: rgba(217, 111, 212, 0.22);
+            --glass: rgba(14, 10, 22, 0.85);
+            --glass-2: rgba(10, 6, 18, 0.92);
+            --glass-inner: rgba(255,255,255,0.03);
+            --glass-inner-h: rgba(255,255,255,0.06);
+            --glass-border: rgba(217, 111, 212, 0.14);
+            --glass-border-dim: rgba(255,255,255,0.05);
+            --header-bg: rgba(8, 4, 16, 0.95);
+            --text: #F0EBF8;
+            --text-sec: #8B7A9E;
+            --text-dim: #3E3050;
+            --on: #5FE87A;
+            --off: #EF4B6C;
+            --on-glow: rgba(95, 232, 122, 0.3);
+            --font-body: 'DM Sans', sans-serif;
+            --font-display: 'Syne', sans-serif;
+            --radius-panel: 12px;
+            --radius-pill: 20px;
+        }
+
+        /* ── KRYPTON THEME OVERRIDES ── */
+        [data-theme="KRYPTON"] {
+            --a1: #00e5ff;
+            --a2: #0088ff;
+            --glow: rgba(0, 229, 255, 0.25);
+            --glass: rgba(10, 10, 12, 0.95);
+            --glass-2: rgba(8, 8, 10, 0.98);
+            --glass-border: rgba(0, 229, 255, 0.15);
+            --header-bg: #050505;
+            --text: #ffffff;
+            --text-sec: #d1d1d1;
+            --on: #00e5ff;
+            --off: #333333;
+            --on-glow: rgba(0, 229, 255, 0.4);
+            --font-body: 'JetBrains Mono', monospace;
+            --font-display: 'VT323', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        html {
+            font-size: 16px; /* Base size for rem calculations */
+        }
+        body {
+            font-family: var(--font-body);
+            background: transparent;
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh; width: 100vw;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+
+        /* ── HEADER ── */
+        .header {
+            position: fixed; top: 22px; left: 32px;
+            display: flex; flex-direction: column; z-index: 100; pointer-events: none;
+        }
+        .logo-text {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(18px, 1.5vw, 28px); font-weight: 800;
+            color: rgba(255,255,255,0.18);
+            letter-spacing: 3px; text-transform: uppercase; line-height: 1;
+        }
+        [data-theme="KRYPTON"] .logo-text { color: #00e5ff22; }
+
+        .logo-text span {
+            background: linear-gradient(135deg, var(--a1), var(--a2));
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent; font-size: 26px;
+        }
+        .logo-sub {
+            font-family: 'Syne', sans-serif;
+            font-size: 8px; color: var(--text-dim);
+            letter-spacing: 4px; font-weight: 700; margin-top: 1px;
+        }
+
+        /* ── VIEW TOGGLE ── */
+        .view-toggle {
+            position: fixed; top: 22px; right: 32px;
+            display: flex; gap: 5px; z-index: 101; pointer-events: all;
+        }
+        .view-btn {
+            padding: 8px 20px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border-dim);
+            border-radius: var(--radius-pill);
+            color: var(--text-sec);
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(10px, 0.9vw, 14px); font-weight: 700;
+            cursor: pointer; letter-spacing: 1px; text-transform: uppercase;
+            transition: border-color 0.15s, background 0.15s;
+            will-change: transform;
+        }
+        .view-btn:hover { border-color: var(--glass-border); color: var(--text); }
+        .view-btn.active {
+            background: linear-gradient(135deg, var(--a1), var(--a2));
+            color: #fff; border-color: transparent;
+            box-shadow: 0 0 14px var(--glow);
+        }
+        .profile-pill {
+            padding: 8px 14px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border-dim);
+            border-radius: var(--radius-pill);
+            color: var(--a1);
+            font-family: var(--font-display);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+        }
+
+        /* ── SEARCH ── */
+        .search-wrapper {
+            position: fixed; top: 22px; left: 50%; transform: translateX(-50%);
+            z-index: 101; pointer-events: all;
+        }
+        .search-input {
+            background: var(--glass);
+            border: 1px solid var(--glass-border-dim);
+            border-radius: var(--radius-pill);
+            padding: 8px 18px;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 13px;
+            width: 200px;
+            outline: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+        .search-input:focus {
+            border-color: var(--a1);
+            width: 280px;
+            box-shadow: 0 0 20px var(--glow);
+            text-align: left;
+        }
+        .search-input::placeholder {
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        /* ── NORMAL MODE OVERLAY ── */
+        .clickgui-overlay {
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.52);
+            display: flex;
+            padding: 80px 24px 24px 24px;
+            gap: 12px;
+            pointer-events: none;
+            position: fixed; top: 0; left: 0; z-index: 1;
+            box-sizing: border-box;
+            align-items: flex-start; justify-content: flex-start;
+            overflow: visible;
+        }
+
+        /* ── NORMAL PANELS ── */
+        .panel {
+            width: 190px; flex-shrink: 0; pointer-events: all;
+            background: var(--glass);
+            border-radius: var(--radius-panel);
+            border: 1px solid var(--glass-border-dim);
+            display: flex; flex-direction: column;
+            backdrop-filter: blur(22px);
+            height: fit-content; max-height: calc(100vh - 140px);
+            overflow: hidden;
+            box-shadow: 0 8px 28px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+        .panel-header {
+            padding: 11px 14px;
+            background: var(--header-bg);
+            display: flex; align-items: center; gap: 7px;
+            font-family: var(--font-display);
+            font-weight: 700; font-size: 10px;
+            letter-spacing: 2px; text-transform: uppercase;
+            border-bottom: 1px solid var(--glass-border);
+            flex-shrink: 0;
+        }
+        .panel-header::before {
+            content: '';
+            width: 2px; height: 12px;
+            background: linear-gradient(180deg, var(--a1), var(--a2));
+            border-radius: 2px; flex-shrink: 0;
+        }
+        .category-name {
+            background: linear-gradient(135deg, var(--a1), var(--a2));
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .module-list { padding: 5px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+        .module {
+            padding: 8px 11px;
+            background: transparent;
+            border-radius: 7px;
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.12s;
+            border: 1px solid transparent;
+        }
+        .module:hover { background: var(--glass-inner-h); }
+        [data-theme="KRYPTON"] .module:hover { background: rgba(0, 229, 255, 0.1); }
+        .module.blocked,
+        .bp-mod-item.blocked {
+            opacity: 0.52;
+            border-style: dashed;
+        }
+        .module.blocked .module-name,
+        .bp-mod-item.blocked .bp-mod-name {
+            color: var(--text-dim);
+        }
+
+        .module.enabled {
+            background: linear-gradient(135deg, rgba(217,111,212,0.09), rgba(155,69,168,0.05));
+            border-color: rgba(217,111,212,0.16);
+        }
+        [data-theme="KRYPTON"] .module.enabled {
+            background: rgba(0, 229, 255, 0.05);
+            border-color: rgba(0, 229, 255, 0.1);
+        }
+
+        .module-name { font-size: 11px; font-weight: 500; color: var(--text-sec); transition: color 0.12s; }
+        [data-theme="KRYPTON"] .module-name { text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+
+        .module.enabled .module-name { color: var(--a1); }
+        .indicator {
+            width: 5px; height: 5px; border-radius: 50%;
+            background: var(--off); flex-shrink: 0;
+            transition: all 0.18s;
+        }
+        [data-theme="KRYPTON"] .indicator {
+            width: 14px; height: 8px; border-radius: 4px;
+            background: #222; border: 1px solid #333;
+            position: relative;
+        }
+        [data-theme="KRYPTON"] .indicator::after {
+            content: ''; position: absolute; left: 2px; top: 1px;
+            width: 4px; height: 4px; border-radius: 50%;
+            background: #666; transition: all 0.2s;
+        }
+
+        .module.enabled .indicator { background: var(--on); box-shadow: 0 0 5px var(--on-glow); }
+        [data-theme="KRYPTON"] .module.enabled .indicator { background: var(--on); border-color: transparent; }
+        [data-theme="KRYPTON"] .module.enabled .indicator::after {
+            left: 8px; background: #fff;
+        }
+
+        /* ══════════════════════════════════════════
+           ── PANEL MODE – ONE BIG UNIFIED PANEL ──
+           ══════════════════════════════════════════ */
+        .panel-mode-wrapper {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; align-items: center; justify-content: center;
+            padding: 80px 32px 32px 32px;
+            pointer-events: none;
+            z-index: 2;
+            background: rgba(0,0,0,0.52);
+        }
+        .big-panel {
+            display: flex;
+            width: 100%; max-width: 960px;
+            height: 100%;
+            background: var(--glass);
+            border-radius: var(--radius-panel);
+            border: 1px solid var(--glass-border-dim);
+            backdrop-filter: blur(28px);
+            box-shadow: 0 12px 48px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04);
+            overflow: hidden;
+            pointer-events: all;
+        }
+
+        /* Left: category sidebar */
+        .bp-cats {
+            width: 158px; flex-shrink: 0;
+            background: var(--header-bg);
+            border-right: 1px solid var(--glass-border-dim);
+            display: flex; flex-direction: column;
+            padding: 14px 8px;
+            gap: 2px;
+            overflow-y: auto;
+        }
+        .bp-cats-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 8px; font-weight: 700;
+            letter-spacing: 3px; color: var(--text-dim);
+            text-transform: uppercase;
+            padding: 0 8px 10px 8px;
+            border-bottom: 1px solid var(--glass-border-dim);
+            margin-bottom: 4px;
+        }
+        .bp-cat-btn {
+            padding: 9px 12px;
+            background: transparent; border: none; border-radius: 8px;
+            color: var(--text-sec);
+            font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700;
+            cursor: pointer; transition: all 0.12s; text-align: left;
+            letter-spacing: 1px; text-transform: uppercase;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .bp-cat-btn .cat-dot {
+            width: 4px; height: 4px; border-radius: 50%;
+            background: transparent; flex-shrink: 0;
+            transition: background 0.15s;
+        }
+        .bp-cat-btn:hover { background: var(--glass-inner-h); color: var(--text); }
+        .bp-cat-btn.active {
+            background: linear-gradient(135deg, rgba(217,111,212,0.14), rgba(155,69,168,0.07));
+            color: var(--a1);
+        }
+        .bp-cat-btn.active .cat-dot { background: var(--a1); }
+
+        /* Middle: module list */
+        .bp-mods {
+            width: 200px; flex-shrink: 0;
+            border-right: 1px solid var(--glass-border-dim);
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .bp-mods-header {
+            padding: 14px 16px 10px 16px;
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--glass-border-dim);
+            font-family: 'Syne', sans-serif;
+            font-size: 8px; font-weight: 700;
+            letter-spacing: 3px; color: var(--text-dim);
+            text-transform: uppercase; flex-shrink: 0;
+        }
+        .bp-mods-list {
+            flex: 1; overflow-y: auto;
+            padding: 6px;
+            display: flex; flex-direction: column; gap: 2px;
+        }
+        .bp-mod-item {
+            padding: 9px 12px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: background 0.12s, border-color 0.12s;
+        }
+        .bp-mod-item:hover { background: var(--glass-inner-h); }
+        .bp-mod-item.enabled {
+            background: linear-gradient(135deg, rgba(217,111,212,0.1), rgba(155,69,168,0.05));
+            border-color: rgba(217,111,212,0.16);
+        }
+        .bp-mod-item.selected { 
+            background: rgba(217,111,212,0.08);
+            border-color: rgba(217,111,212,0.25);
+            box-shadow: inset 2px 0 0 var(--a1);
+        }
+        .bp-mod-item.selected.enabled {
+            background: linear-gradient(135deg, rgba(217,111,212,0.15), rgba(155,69,168,0.08));
+        }
+        .bp-mod-name { font-size: 11px; font-weight: 500; color: var(--text-sec); transition: color 0.12s; }
+        .bp-mod-item.enabled .bp-mod-name { color: var(--a1); }
+        .bp-mod-item.selected .bp-mod-name { color: var(--text); }
+        .indicator {
+            width: 5px; height: 5px; border-radius: 50%;
+            background: var(--off); flex-shrink: 0;
+            transition: background 0.18s, box-shadow 0.18s;
+        }
+        .bp-mod-item.enabled .indicator { background: var(--on); box-shadow: 0 0 5px var(--on-glow); }
+
+        /* Right: settings */
+        .bp-settings {
+            flex: 1;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+        .bp-settings-header {
+            padding: 14px 20px;
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex; align-items: center; gap: 8px;
+            flex-shrink: 0;
+        }
+        .bp-settings-header::before {
+            content: '';
+            width: 2px; height: 14px;
+            background: linear-gradient(180deg, var(--a1), var(--a2));
+            border-radius: 2px; flex-shrink: 0;
+        }
+        .bp-settings-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 12px; font-weight: 700;
+            color: var(--a1); letter-spacing: 1px;
+        }
+        .bp-settings-content {
+            flex: 1; overflow-y: auto;
+            padding: 16px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .bp-no-sel {
+            display: flex; align-items: center; justify-content: center;
+            height: 100%; color: var(--text-dim);
+            font-size: 12px; font-style: italic;
+        }
+
+        /* ── SETTINGS FLYOUT (normal mode) ── */
+        #settings-container {
+            position: fixed; right: 32px; top: 105px; width: 300px;
+            background: var(--glass);
+            border-radius: 14px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(28px);
+            box-shadow: 0 18px 50px rgba(0,0,0,0.65), 0 0 0 1px rgba(217,111,212,0.04);
+            display: none; flex-direction: column; overflow: hidden; pointer-events: all;
+            z-index: 200;
+            max-height: calc(100vh - 140px);
+        }
+        .settings-header {
+            padding: 14px 18px;
+            background: var(--header-bg);
+            font-family: 'Syne', sans-serif;
+            font-weight: 700; color: var(--a1);
+            font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex; align-items: center; gap: 7px;
+            flex-shrink: 0;
+        }
+        .settings-header::before {
+            content: '';
+            width: 2px; height: 14px;
+            background: linear-gradient(180deg, var(--a1), var(--a2));
+            border-radius: 2px;
+        }
+        .settings-content {
+            padding: 12px; display: flex; flex-direction: column; gap: 9px;
+            overflow-y: auto; flex: 1;
+        }
+
+        /* ── SETTING ITEMS ── */
+        .setting-item { display: flex; flex-direction: column; gap: 7px; }
+        .setting-row { display: flex; justify-content: space-between; align-items: center; }
+        .setting-name {
+            font-size: 9px; color: var(--text-sec); font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .setting-divider { height: 1px; background: var(--glass-border-dim); margin: 1px 0; }
+
+        /* Toggle */
+        .toggle-btn {
+            width: 32px; height: 16px;
+            background: rgba(255,255,255,0.07);
+            border-radius: 8px; position: relative; cursor: pointer;
+            transition: background 0.18s;
+            border: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
+        }
+        .toggle-btn.active { background: var(--a2); border-color: var(--a1); }
+        .toggle-knob {
+            width: 10px; height: 10px; background: white; border-radius: 50%;
+            position: absolute; top: 2px; left: 2px; transition: left 0.16s ease;
+        }
+        .toggle-btn.active .toggle-knob { left: 18px; }
+
+        /* Slider */
+        .slider-val { font-size: 10px; color: var(--a1); font-weight: 700; }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track {
+            height: 3px; cursor: pointer;
+            background: linear-gradient(90deg, var(--a2), var(--a1));
+            border-radius: 2px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 12px; width: 12px; border-radius: 50%;
+            background: var(--a1); -webkit-appearance: none; margin-top: -4.5px;
+            box-shadow: 0 0 7px var(--glow);
+        }
+
+        /* Buttons */
+        .btn-action {
+            background: rgba(255,255,255,0.04); padding: 6px 10px;
+            border-radius: 7px; border: 1px solid var(--glass-border-dim);
+            color: var(--text-sec); font-size: 10px; cursor: pointer;
+            text-align: center; transition: all 0.12s; width: 100%;
+        }
+        .keybind-row { display: flex; gap: 6px; align-items: center; }
+        .keybind-clear { width: 28px; min-width: 28px; color: var(--off); }
+        .btn-action:hover { background: var(--glass-inner-h); color: #fff; border-color: var(--glass-border); }
+        .btn-action.listening {
+            color: var(--a1); border-color: var(--a1);
+            box-shadow: 0 0 10px var(--glow);
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+        /* Color & String */
+        .color-picker-input {
+            -webkit-appearance: none; width: 34px; height: 17px;
+            border: none; border-radius: 4px; background: transparent; cursor: pointer;
+        }
+        .color-picker-input::-webkit-color-swatch-wrapper { padding: 0; }
+        .color-picker-input::-webkit-color-swatch { border: 1px solid var(--glass-border); border-radius: 4px; }
+        .string-input {
+            background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border-dim);
+            border-radius: 7px; padding: 6px 10px; color: #fff;
+            font-size: 10px; outline: none; transition: all 0.12s; width: 100%;
+        }
+        .string-input:focus { border-color: var(--glass-border); background: var(--glass-inner-h); }
+
+        /* Item List */
+        .item-option {
+            display: flex; align-items: center; gap: 6px;
+            padding: 4px 7px; border-radius: 5px; cursor: pointer;
+            font-size: 10px; color: var(--text-sec); transition: background 0.1s;
+        }
+        .item-option:hover { background: var(--glass-inner); }
+        .item-option.selected { background: rgba(217,111,212,0.09); color: var(--a1); }
+        .item-option input { cursor: pointer; }
+
+        /* Slot & Bedrock */
+        .slot-btn { transition: transform 0.1s; }
+        .slot-btn:hover { transform: scale(1.1); }
+
+        /* ── NOTIFICATIONS ── */
+        #notification-container {
+            position: fixed; bottom: 18px; right: 18px;
+            display: flex; flex-direction: column; gap: 7px;
+            z-index: 1000; pointer-events: none;
+        }
+        .notification {
+            background: rgba(10,6,20,0.9);
+            border-left: 2px solid;
+            border-radius: 9px; padding: 10px 14px;
+            min-width: 185px; max-width: 265px;
+            backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 4px 22px rgba(0,0,0,0.5);
+            animation: notifIn 0.22s cubic-bezier(0.34,1.2,0.64,1);
+            pointer-events: all;
+        }
+        .notification.hiding { animation: notifOut 0.2s ease-in forwards; }
+        .notification.info    { border-left-color: #00BCD4; }
+        .notification.success { border-left-color: var(--on); }
+        .notification.warning { border-left-color: #FF9800; }
+        .notification.alert   { border-left-color: var(--off); }
+        .notification-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 11px; color: #fff; margin-bottom: 3px; }
+        .notification-message { font-size: 10px; color: var(--text-sec); }
+        .tutorial-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 36px;
+            background: rgba(2, 4, 8, 0.76);
+            backdrop-filter: blur(14px);
+        }
+        .tutorial-card {
+            width: min(760px, 100%);
+            max-height: min(82vh, 920px);
+            overflow: hidden;
+            border-radius: 18px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-2);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+            display: flex;
+            flex-direction: column;
+        }
+        .tutorial-head {
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--glass-border);
+            background: var(--header-bg);
+        }
+        .tutorial-title {
+            font-family: var(--font-display);
+            font-size: 16px;
+            letter-spacing: 1px;
+            color: var(--a1);
+            text-transform: uppercase;
+        }
+        .tutorial-body {
+            padding: 20px;
+            overflow-y: auto;
+            display: grid;
+            gap: 14px;
+        }
+        .tutorial-section {
+            padding: 14px;
+            border: 1px solid var(--glass-border-dim);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.03);
+        }
+        .tutorial-section h3 {
+            font-family: var(--font-display);
+            font-size: 14px;
+            color: var(--text);
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .tutorial-section p,
+        .tutorial-section li {
+            color: var(--text-sec);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .tutorial-section ul {
+            padding-left: 18px;
+            display: grid;
+            gap: 5px;
+        }
+        @keyframes notifIn  { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes notifOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(110%); opacity: 0; } }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(217,111,212,0.18); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(217,111,212,0.35); }
+
+        /* Settings CSS */
+        .settings-tab-btn {
+            background: transparent; border: none; border-radius: 8px;
+            color: var(--text-sec);
+            font-family: var(--font-display); font-size: 11px; font-weight: 700;
+            cursor: pointer; transition: all 0.12s; text-align: left;
+            letter-spacing: 1px; text-transform: uppercase;
+            padding: 10px 14px;
+        }
+        .settings-tab-btn:hover { background: var(--glass-inner-h); color: var(--text); }
+        .settings-tab-btn.active {
+            background: linear-gradient(135deg, rgba(217,111,212,0.14), rgba(155,69,168,0.07));
+            color: var(--a1);
+        }
+        [data-theme="KRYPTON"] .settings-tab-btn.active {
+            background: rgba(0, 229, 255, 0.1);
+            color: var(--a1);
+        }
+
+        .spotify-connect-btn {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: var(--radius-pill);
+            background: #1db954;
+            color: #000;
+            font-family: var(--font-display);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+        }
+        .spotify-connect-btn:hover { background: #1ed760; }
+        .spotify-connect-btn:disabled { opacity: 0.65; cursor: wait; }
+        .spotify-url-box {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--glass-border-dim);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            line-height: 1.45;
+            color: #1db954;
+            word-break: break-all;
+            user-select: text;
+            display: none;
+        }
+        .spotify-status-line {
+            font-size: 12px;
+            color: var(--text-sec);
+            line-height: 1.4;
+        }
+        .spotify-status-line.connected { color: #1db954; }
+
+        .theme-select-btn, .perf-select-btn {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--glass-border-dim);
+            border-radius: 6px; padding: 8px 10px;
+            color: var(--text-sec); font-size: 10px; cursor: pointer;
+            font-family: var(--font-body); text-align: center; transition: all 0.12s;
+        }
+        .theme-select-btn:hover, .perf-select-btn:hover {
+            background: var(--glass-inner-h); color: #fff; border-color: var(--glass-border);
+        }
+        .theme-select-btn.active, .perf-select-btn.active {
+            background: var(--a2); border-color: var(--a1); color: #fff;
+            box-shadow: 0 0 8px var(--glow);
+        }
+
+        /* Performance Mode Styles */
+        body.low-perf * {
+            animation: none !important;
+            transition: none !important;
+        }
+        body.low-perf .big-panel, body.low-perf .panel, body.low-perf #settings-container, body.low-perf .tutorial-card {
+            backdrop-filter: none !important;
+        }
+        body.ultra-fast * {
+            animation: none !important;
+            transition: none !important;
+        }
+        body.ultra-fast .big-panel, body.ultra-fast .panel, body.ultra-fast #settings-container, body.ultra-fast .tutorial-card {
+            backdrop-filter: none !important;
+        }
+
+        .friend-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 10px; background: rgba(255,255,255,0.03);
+            border-radius: 6px; border: 1px solid var(--glass-border-dim);
+        }
+        .friend-info { display: flex; align-items: center; gap: 8px; }
+        .friend-status-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+        }
+        .friend-status-dot.online {
+            background: #5FE87A; box-shadow: 0 0 5px #5FE87A;
+        }
+        .friend-status-dot.offline {
+            background: #555;
+        }
+        .friend-ign { font-size: 11px; font-weight: 500; color: var(--text-sec); }
+        .friend-remove-btn {
+            background: transparent; border: none; color: var(--off); font-size: 11px; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+        }
+        .friend-remove-btn:hover { background: rgba(239,75,108,0.1); }
+
+        .config-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 10px; background: rgba(255,255,255,0.03);
+            border-radius: 6px; border: 1px solid var(--glass-border-dim);
+        }
+        .config-name-text { font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; }
+        .config-actions { display: flex; gap: 4px; }
+        .config-action-btn {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border-dim);
+            border-radius: 4px; padding: 4px 8px; color: var(--text-sec); font-size: 9px; cursor: pointer;
+            text-transform: uppercase; font-weight: 700; transition: all 0.1s;
+        }
+        .config-action-btn:hover { background: var(--glass-inner-h); color: #fff; }
+        .config-action-btn.load-btn { color: var(--a1); border-color: var(--a1); }
+        .config-action-btn.delete-btn { color: var(--off); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo-text"><span>G</span>LUTEN <span>F</span>ARM <span>M</span>ACRO</div>
+        <div class="logo-sub">RECODE V2.0</div>
+    </div>
+    <div class="view-toggle">
+        <button class="view-btn active" id="btn-normal" onclick="setViewMode('normal')">Normal</button>
+        <button class="view-btn" id="btn-panel" onclick="setViewMode('panel')">Panel</button>
+        <button class="view-btn" onclick="openTutorial()">Tutorial</button>
+        <button class="view-btn" id="btn-settings-toggle" onclick="openSettingsModal()">Settings</button>
+        <div class="profile-pill" id="profile-pill">AC: VANILLA</div>
+    </div>
+
+    <div class="search-wrapper">
+        <input type="text" class="search-input" id="mod-search" placeholder="Search modules..." oninput="filterModules(this.value)">
+    </div>
+
+    <div class="clickgui-overlay" id="overlay">
+        <div id="loading" style="color: white; font-size: 14px; padding: 20px; opacity: 0.4;">Loading...</div>
+    </div>
+
+    <div id="settings-container">
+        <div class="settings-header" id="current-mod-name">Settings</div>
+        <div class="settings-content" id="settings-list"></div>
+    </div>
+
+    <div id="notification-container"></div>
+    <div class="tutorial-modal" id="tutorial-modal">
+        <div class="tutorial-card">
+            <div class="tutorial-head">
+                <div class="tutorial-title">GUI Tutorial</div>
+                <button class="view-btn" onclick="closeTutorial()">Close</button>
+            </div>
+            <div class="tutorial-body">
+                <div class="tutorial-section">
+                    <h3>Navigation</h3>
+                    <p>Open the GUI with your bind, then use the search bar to filter modules instantly. The top-right buttons switch between the classic multi-panel layout and the unified panel layout.</p>
+                </div>
+                <div class="tutorial-section">
+                    <h3>Modules</h3>
+                    <ul>
+                        <li>Left click toggles a module.</li>
+                        <li>Right click opens the module settings.</li>
+                        <li>Modules that are faded out are blocked by the current AntiCheat profile.</li>
+                    </ul>
+                </div>
+                <div class="tutorial-section">
+                    <h3>Settings</h3>
+                    <ul>
+                        <li>Sliders can be dragged and also scrolled over in the browser panel.</li>
+                        <li>Enum settings cycle when you click them.</li>
+                        <li>Keybinds listen for the next key press, and the small <strong>X</strong> button unbinds them.</li>
+                    </ul>
+                </div>
+                <div class="tutorial-section">
+                    <h3>Panel Mode</h3>
+                    <p>Pick a category on the left, click a module in the middle to toggle it, and right click that module to load its settings on the right side.</p>
+                </div>
+                <div class="tutorial-section">
+                    <h3>AntiCheat Profiles</h3>
+                    <p>The <strong>Config</strong> category contains the AntiCheat selector. Switching between Vanilla, Grim and Vulcan can automatically disable blocked modules and tune a few safer default timings.</p>
+                </div>
+                <div class="tutorial-section">
+                    <h3>Scrolling</h3>
+                    <p>All long settings lists and this tutorial are scrollable. If you use the embedded browser zoom, hold <strong>Ctrl</strong> and use the mouse wheel.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tutorial-modal" id="settings-modal" style="display: none;">
+        <div class="tutorial-card" style="width: min(850px, 95%); height: min(600px, 85vh);">
+            <div class="tutorial-head">
+                <div class="tutorial-title">GFM Preferences & Settings</div>
+                <button class="view-btn" onclick="closeSettingsModal()">Close</button>
+            </div>
+            <div class="settings-modal-body" style="display: flex; flex: 1; overflow: hidden; background: rgba(0,0,0,0.25);">
+                <!-- Settings Sidebar -->
+                <div class="settings-modal-sidebar" style="width: 180px; border-right: 1px solid var(--glass-border-dim); display: flex; flex-direction: column; padding: 12px; gap: 4px;">
+                    <button class="settings-tab-btn active" id="tab-btn-audio-appearance" onclick="switchSettingsTab('audio-appearance')">General</button>
+                    <button class="settings-tab-btn" id="tab-btn-configs-tab" onclick="switchSettingsTab('configs-tab')">Configs</button>
+                    <button class="settings-tab-btn" id="tab-btn-friends-tab" onclick="switchSettingsTab('friends-tab')">Friends</button>
+                </div>
+                <!-- Settings Content Area -->
+                <div class="settings-modal-content" style="flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;">
+                    
+                    <!-- General Tab -->
+                    <div id="tab-audio-appearance" class="settings-tab-pane" style="display: flex; flex-direction: column; gap: 16px;">
+                        <div class="settings-section-title" style="font-family: var(--font-display); font-size: 14px; color: var(--a1); border-bottom: 1px solid var(--glass-border-dim); padding-bottom: 6px; text-transform: uppercase;">Audio Preferences</div>
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 12px; color: var(--text-sec);">Notification Sounds</span>
+                            <div class="toggle-btn" id="setting-play-sounds" onclick="togglePlaySoundsSetting()">
+                                <div class="toggle-knob"></div>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 12px; color: var(--text-sec);">Sound Volume</span>
+                                <span id="val-sound-volume" style="font-size: 11px; color: var(--a1); font-weight: 700;">30%</span>
+                            </div>
+                            <input type="range" id="setting-sound-volume" min="0" max="1" step="0.05" oninput="document.getElementById('val-sound-volume').innerText=Math.round(this.value*100)+'%'" onchange="saveClientSettings()" style="width: 100%;">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end;">
+                            <label style="display: flex; flex-direction: column; gap: 5px;">
+                                <span style="font-size: 12px; color: var(--text-sec);">Toggle On Sound</span>
+                                <select id="setting-toggle-on-sound" class="string-input" onchange="changeSoundSlot('toggleOnSound', this.value)"></select>
+                            </label>
+                            <button class="view-btn" onclick="openSoundImport('toggleOnSound')" style="padding: 8px 12px;">Import</button>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end;">
+                            <label style="display: flex; flex-direction: column; gap: 5px;">
+                                <span style="font-size: 12px; color: var(--text-sec);">Toggle Off Sound</span>
+                                <select id="setting-toggle-off-sound" class="string-input" onchange="changeSoundSlot('toggleOffSound', this.value)"></select>
+                            </label>
+                            <button class="view-btn" onclick="openSoundImport('toggleOffSound')" style="padding: 8px 12px;">Import</button>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end;">
+                            <label style="display: flex; flex-direction: column; gap: 5px;">
+                                <span style="font-size: 12px; color: var(--text-sec);">Notification Sound</span>
+                                <select id="setting-notification-sound" class="string-input" onchange="changeSoundSlot('notificationSound', this.value)"></select>
+                            </label>
+                            <button class="view-btn" onclick="openSoundImport('notificationSound')" style="padding: 8px 12px;">Import</button>
+                        </div>
+                        <input type="file" id="sound-import-input" accept=".wav,.mp3,audio/wav,audio/x-wav,audio/mpeg" style="display: none;" onchange="handleSoundImport(this.files)">
+
+                        <div class="settings-section-title" style="font-family: var(--font-display); font-size: 14px; color: var(--a1); border-bottom: 1px solid var(--glass-border-dim); padding-bottom: 6px; text-transform: uppercase; margin-top: 10px;">Appearance</div>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <span style="font-size: 12px; color: var(--text-sec);">Select GUI Theme</span>
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+                                <button class="theme-select-btn" id="theme-btn-CYBERPUNK" onclick="changeThemeOption('CYBERPUNK')">Classic</button>
+                                <button class="theme-select-btn" id="theme-btn-KRYPTON" onclick="changeThemeOption('KRYPTON')">Krypton</button>
+                                <button class="theme-select-btn" id="theme-btn-APPLE" onclick="changeThemeOption('APPLE')">Light</button>
+                                <button class="theme-select-btn" id="theme-btn-GLASS_NEON" onclick="changeThemeOption('GLASS_NEON')">Modern</button>
+                                <button class="theme-select-btn" id="theme-btn-AMOLED" onclick="changeThemeOption('AMOLED')">AMOLED</button>
+                                <button class="theme-select-btn" id="theme-btn-VALORANT" onclick="changeThemeOption('VALORANT')">Valorant</button>
+                                <button class="theme-select-btn" id="theme-btn-VANILLA_PLUS" onclick="changeThemeOption('VANILLA_PLUS')">Vanilla+</button>
+                            </div>
+                        </div>
+
+                        <div class="settings-section-title" style="font-family: var(--font-display); font-size: 14px; color: var(--a1); border-bottom: 1px solid var(--glass-border-dim); padding-bottom: 6px; text-transform: uppercase; margin-top: 10px;">Performance</div>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <span style="font-size: 12px; color: var(--text-sec);">GUI Performance Mode</span>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                                <button class="perf-select-btn" id="perf-btn-LOW" onclick="changePerformanceMode('LOW')">Low Perf</button>
+                                <button class="perf-select-btn" id="perf-btn-NORMAL" onclick="changePerformanceMode('NORMAL')">Normal</button>
+                                <button class="perf-select-btn" id="perf-btn-ULTRA_FAST" onclick="changePerformanceMode('ULTRA_FAST')">Ultra Fast</button>
+                            </div>
+                            <span style="font-size: 9px; color: var(--text-dim); line-height: 1.3;">Low Performance disables blurs & animations for low-end PCs. Ultra Fast optimizes rendering speeds.</span>
+                        </div>
+
+                        <div class="settings-section-title" style="font-family: var(--font-display); font-size: 14px; color: var(--a1); border-bottom: 1px solid var(--glass-border-dim); padding-bottom: 6px; text-transform: uppercase; margin-top: 10px;">Compatibility Profile</div>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <span style="font-size: 12px; color: var(--text-sec);">AntiCheat Profile</span>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                                <button class="perf-select-btn" id="ac-btn-VANILLA" onclick="changeAntiCheatProfile('VANILLA')">Vanilla</button>
+                                <button class="perf-select-btn" id="ac-btn-GRIM" onclick="changeAntiCheatProfile('GRIM')">Grim</button>
+                                <button class="perf-select-btn" id="ac-btn-VULCAN" onclick="changeAntiCheatProfile('VULCAN')">Vulcan</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Configs Tab -->
+                    <div id="tab-configs-tab" class="settings-tab-pane" style="display: none; flex-direction: column; gap: 16px;">
+                        <div class="settings-section-title" style="font-family: var(--font-display); font-size: 14px; color: var(--a1); border-bottom: 1px solid var(--glass-border-dim); padding-bottom: 6px; text-transform: uppercase;">Config Management</div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <button class="view-btn active" onclick="saveConfigDialog()" style="padding: 10px;">Save Config As...</button>
+                            <button class="view-btn" onclick="importConfigDialog()" style="padding: 10px;">Import Config File...</button>
+                        </div>
+                        <input type="file" id="config-import-input" accept=".json,application/json" style="display: none;" onchange="handleConfigFiles(this.files)">
+
+                        <!-- Drag & Drop Zone -->
+                        <div id="config-drop-zone" style="border: 2px dashed var(--glass-border); border-radius: 8px; padding: 24px; text-align: center; color: var(--text-sec); font-size: 12px; cursor: pointer; transition: background 0.2s;" ondragover="event.preventDefault(); this.style.background='rgba(255,255,255,0.05)';" ondragleave="this.style.background='';" ondrop="handleConfigDrop(event)">
+                            Drag & Drop configuration .json files here to import them instantly
+                        </div>
+
+                        <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-top: 6px;">Saved Configs</div>
+                        <div id="configs-list-container" style="display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto;">
+                            <!-- populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Friends Tab -->
+                    <div id="tab-friends-tab" class="settings-tab-pane" style="display: none; flex-direction: column; gap: 14px;">
+                        <div class="settings-section-title" style="font-family: var(--font-display); font-size: 14px; color: var(--a1); border-bottom: 1px solid var(--glass-border-dim); padding-bottom: 6px; text-transform: uppercase;">Friends List</div>
+                        
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="add-friend-name" class="string-input" placeholder="Minecraft IGN" style="flex: 1; padding: 8px;">
+                            <button class="view-btn active" onclick="addFriendFromInput()" style="flex-shrink: 0; padding: 8px 18px;">Add</button>
+                        </div>
+
+                        <!-- Custom Colors & highlight options -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; border: 1px solid var(--glass-border-dim);">
+                                <span style="font-size: 11px; color: var(--text-sec);">Highlight Friends</span>
+                                <div class="toggle-btn" id="setting-highlight-friends" onclick="toggleHighlightFriendsSetting()">
+                                    <div class="toggle-knob"></div>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; border: 1px solid var(--glass-border-dim);">
+                                <span style="font-size: 11px; color: var(--text-sec);">Friend Color</span>
+                                <input type="color" id="setting-friend-color" onchange="saveClientSettings()" style="width: 32px; height: 20px; border: none; background: transparent; cursor: pointer;">
+                            </div>
+                        </div>
+
+                        <div style="position: relative; margin-top: 4px;">
+                            <input type="text" id="friend-search" class="string-input" placeholder="Search friends..." oninput="filterFriendsList(this.value)" style="padding: 8px; padding-left: 28px;">
+                            <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--text-dim);">🔍</span>
+                        </div>
+
+                        <div id="friends-list-container" style="display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto;">
+                            <!-- populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentModules = [];
+        let openModule = null;
+        let isListening = false;
+        let listeningSetting = null;
+        let pendingUpdate = false;
+        let viewMode = 'normal';
+        let selectedCategory = null;
+        let selectedModInPanel = null; // which mod is "selected" (right-side settings) in panel mode
+        let guiTheme = 'KRYPTON';
+        let moduleFilter = '';
+        let antiCheatProfile = 'VANILLA';
+
+        let clientSettings = {
+            playNotificationSounds: true,
+            soundVolume: 0.3,
+            toggleOnSound: 'default',
+            toggleOffSound: 'default',
+            notificationSound: 'default',
+            theme: 'KRYPTON',
+            performanceMode: 'NORMAL',
+            antiCheatProfile: 'VANILLA',
+            highlightFriends: true,
+            friendColor: '#00FF00'
+        };
+        let savedFriends = [];
+        let importedSounds = [];
+        let pendingSoundSlot = null;
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
+        }
+
+        function escapeAttr(value) {
+            return escapeHtml(value);
+        }
+
+        function formatKeybindName(setting) {
+            const rawCode = Number(setting?.min);
+            if (rawCode >= 65 && rawCode <= 90) return String.fromCharCode(rawCode).toLowerCase();
+            if (rawCode >= 48 && rawCode <= 57) return String.fromCharCode(rawCode);
+            if (rawCode >= 1000) return `mouse ${rawCode - 999}`;
+
+            const rawName = String(setting?.value ?? 'None');
+            const keyMatch = rawName.match(/^KEY_(\d+)$/i);
+            if (keyMatch) {
+                const code = Number(keyMatch[1]);
+                if (code >= 65 && code <= 90) return String.fromCharCode(code).toLowerCase();
+                if (code >= 48 && code <= 57) return String.fromCharCode(code);
+            }
+            const aliases = {
+                LSHIFT: 'left shift', RSHIFT: 'right shift', LCTRL: 'left ctrl', RCTRL: 'right ctrl',
+                LALT: 'left alt', RALT: 'right alt', BKSP: 'backspace', DEL: 'delete',
+                ESC: 'escape', PGUP: 'page up', PGDN: 'page down'
+            };
+            return aliases[rawName] || rawName;
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settings-modal').style.display = 'flex';
+            loadClientSettings();
+            fetchSounds();
+            fetchConfigs();
+            fetchFriends();
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        function switchSettingsTab(tabId) {
+            document.querySelectorAll('.settings-tab-pane').forEach(p => p.style.display = 'none');
+            document.querySelectorAll('.settings-tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + tabId).style.display = 'flex';
+            document.getElementById('tab-btn-' + tabId).classList.add('active');
+        }
+
+        async function loadClientSettings() {
+            try {
+                const res = await fetch('http://localhost:1337/api/settings');
+                clientSettings = await res.json();
+                
+                // Volume slider
+                document.getElementById('setting-sound-volume').value = clientSettings.soundVolume;
+                document.getElementById('val-sound-volume').innerText = Math.round(clientSettings.soundVolume * 100) + '%';
+                renderSoundSelects();
+                
+                // Toggle notification sounds
+                const psBtn = document.getElementById('setting-play-sounds');
+                psBtn.classList.toggle('active', !!clientSettings.playNotificationSounds);
+                
+                // Toggle highlights
+                const hfBtn = document.getElementById('setting-highlight-friends');
+                hfBtn.classList.toggle('active', !!clientSettings.highlightFriends);
+                
+                // Friend color
+                document.getElementById('setting-friend-color').value = clientSettings.friendColor;
+
+                // Active Theme selection styling
+                document.querySelectorAll('.theme-select-btn').forEach(btn => btn.classList.remove('active'));
+                const themeBtn = document.getElementById('theme-btn-' + clientSettings.theme);
+                if (themeBtn) themeBtn.classList.add('active');
+
+                // Apply active theme instantly
+                applyGuiTheme(clientSettings.theme);
+
+                // Active Perf mode selection styling
+                document.querySelectorAll('.perf-select-btn').forEach(btn => btn.classList.remove('active'));
+                const perfBtn = document.getElementById('perf-btn-' + clientSettings.performanceMode);
+                if (perfBtn) perfBtn.classList.add('active');
+                
+                // Apply performance classes
+                applyPerformanceClasses(clientSettings.performanceMode);
+
+                // Active AntiCheat profile selection styling
+                document.querySelectorAll('#tab-audio-appearance .perf-select-btn').forEach(btn => {
+                    if (btn.id.startsWith('ac-btn-')) btn.classList.remove('active');
+                });
+                const acBtn = document.getElementById('ac-btn-' + clientSettings.antiCheatProfile);
+                if (acBtn) acBtn.classList.add('active');
+                
+                antiCheatProfile = clientSettings.antiCheatProfile;
+                const pill = document.getElementById('profile-pill');
+                if (pill) pill.textContent = `AC: ${antiCheatProfile}`;
+            } catch (e) {
+                console.error("Error loading client settings", e);
+            }
+        }
+
+        async function saveClientSettings() {
+            const volume = document.getElementById('setting-sound-volume').value;
+            const friendColor = document.getElementById('setting-friend-color').value;
+            
+            const params = new URLSearchParams();
+            params.append('playNotificationSounds', clientSettings.playNotificationSounds);
+            params.append('soundVolume', volume);
+            params.append('toggleOnSound', clientSettings.toggleOnSound || 'default');
+            params.append('toggleOffSound', clientSettings.toggleOffSound || 'default');
+            params.append('notificationSound', clientSettings.notificationSound || 'default');
+            params.append('theme', clientSettings.theme);
+            params.append('performanceMode', clientSettings.performanceMode);
+            params.append('antiCheatProfile', clientSettings.antiCheatProfile);
+            params.append('highlightFriends', clientSettings.highlightFriends);
+            params.append('friendColor', friendColor);
+
+            try {
+                await fetch('http://localhost:1337/api/settings/update?' + params.toString());
+            } catch (e) {
+                console.error("Error saving client settings", e);
+            }
+        }
+
+        function togglePlaySoundsSetting() {
+            clientSettings.playNotificationSounds = !clientSettings.playNotificationSounds;
+            document.getElementById('setting-play-sounds').classList.toggle('active', clientSettings.playNotificationSounds);
+            saveClientSettings();
+        }
+
+        function toggleHighlightFriendsSetting() {
+            clientSettings.highlightFriends = !clientSettings.highlightFriends;
+            document.getElementById('setting-highlight-friends').classList.toggle('active', clientSettings.highlightFriends);
+            saveClientSettings();
+        }
+
+        function changeThemeOption(themeName) {
+            clientSettings.theme = themeName;
+            document.querySelectorAll('.theme-select-btn').forEach(btn => btn.classList.remove('active'));
+            const themeBtn = document.getElementById('theme-btn-' + themeName);
+            if (themeBtn) themeBtn.classList.add('active');
+            applyGuiTheme(themeName);
+            saveClientSettings();
+        }
+
+        function applyPerformanceClasses(mode) {
+            document.body.classList.remove('low-perf', 'ultra-fast');
+            if (mode === 'LOW') {
+                document.body.classList.add('low-perf');
+            } else if (mode === 'ULTRA_FAST') {
+                document.body.classList.add('ultra-fast');
+            }
+        }
+
+        function changePerformanceMode(mode) {
+            clientSettings.performanceMode = mode;
+            document.querySelectorAll('.perf-select-btn').forEach(btn => {
+                if (btn.id.startsWith('perf-btn-')) btn.classList.remove('active');
+            });
+            const perfBtn = document.getElementById('perf-btn-' + mode);
+            if (perfBtn) perfBtn.classList.add('active');
+            applyPerformanceClasses(mode);
+            saveClientSettings();
+        }
+
+        function changeAntiCheatProfile(profile) {
+            clientSettings.antiCheatProfile = profile;
+            document.querySelectorAll('#tab-audio-appearance .perf-select-btn').forEach(btn => {
+                if (btn.id.startsWith('ac-btn-')) btn.classList.remove('active');
+            });
+            const acBtn = document.getElementById('ac-btn-' + profile);
+            if (acBtn) acBtn.classList.add('active');
+            
+            antiCheatProfile = profile;
+            const pill = document.getElementById('profile-pill');
+            if (pill) pill.textContent = `AC: ${antiCheatProfile}`;
+            saveClientSettings();
+        }
+
+        async function fetchSounds() {
+            try {
+                const res = await fetch('http://localhost:1337/api/sounds');
+                const data = await res.json();
+                importedSounds = Array.isArray(data.sounds) ? data.sounds : [];
+                renderSoundSelects();
+            } catch (e) {
+                console.error("Error loading sounds", e);
+            }
+        }
+
+        function renderSoundSelects() {
+            const slots = [
+                ['setting-toggle-on-sound', 'toggleOnSound', 'Default Toggle On'],
+                ['setting-toggle-off-sound', 'toggleOffSound', 'Default Toggle Off'],
+                ['setting-notification-sound', 'notificationSound', 'Default Notification']
+            ];
+            slots.forEach(([id, key, defaultLabel]) => {
+                const select = document.getElementById(id);
+                if (!select) return;
+                const selected = clientSettings[key] || 'default';
+                const options = [
+                    `<option value="default">${defaultLabel}</option>`,
+                    ...importedSounds.map(name => `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`)
+                ];
+                select.innerHTML = options.join('');
+                select.value = importedSounds.includes(selected) ? selected : 'default';
+            });
+        }
+
+        function changeSoundSlot(slot, value) {
+            clientSettings[slot] = value || 'default';
+            saveClientSettings();
+        }
+
+        function openSoundImport(slot) {
+            pendingSoundSlot = slot;
+            const input = document.getElementById('sound-import-input');
+            input.value = '';
+            input.click();
+        }
+
+        async function handleSoundImport(files) {
+            if (!files || files.length === 0) return;
+            const file = files[0];
+            const lowerName = file.name.toLowerCase();
+            if (!lowerName.endsWith('.wav') && !lowerName.endsWith('.mp3')) {
+                showNotification('Invalid File', 'Only .wav and .mp3 sound files are supported', 'alert', 3000);
+                return;
+            }
+
+            try {
+                const res = await fetch('http://localhost:1337/api/sounds/import?name=' + encodeURIComponent(file.name), {
+                    method: 'POST',
+                    body: file
+                });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    await fetchSounds();
+                    if (pendingSoundSlot) {
+                        clientSettings[pendingSoundSlot] = data.name;
+                        renderSoundSelects();
+                        saveClientSettings();
+                    }
+                }
+            } catch (e) {
+                console.error("Error importing sound", e);
+                showNotification('Sounds', 'Failed to import sound', 'alert', 3000);
+            } finally {
+                pendingSoundSlot = null;
+            }
+        }
+
+        // --- CONFIG MANAGEMENT ---
+        async function fetchConfigs() {
+            try {
+                const res = await fetch('http://localhost:1337/api/configs');
+                const data = await res.json();
+                renderConfigsList(data.configs, data.current);
+            } catch (e) {
+                console.error("Error loading configs list", e);
+            }
+        }
+
+        function renderConfigsList(configs, current) {
+            const container = document.getElementById('configs-list-container');
+            container.innerHTML = '';
+            configs.forEach(name => {
+                const row = document.createElement('div');
+                row.className = 'config-row';
+                if (name === current) {
+                    row.style.borderColor = 'var(--a1)';
+                    row.style.background = 'rgba(217,111,212,0.06)';
+                }
+                
+                row.innerHTML = `
+                    <span class="config-name-text" style="${name === current ? 'color: var(--a1);' : ''}">${name}</span>
+                    <div class="config-actions">
+                        <button class="config-action-btn load-btn" onclick="loadConfig('${name}')">Load</button>
+                        <button class="config-action-btn" onclick="saveConfig('${name}')">Save</button>
+                        <button class="config-action-btn" onclick="renameConfig('${name}')">Rename</button>
+                        <button class="config-action-btn delete-btn" onclick="deleteConfig('${name}')">Delete</button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        async function saveConfigDialog() {
+            if (window.showSaveFilePicker) {
+                try {
+                    const response = await fetch('http://localhost:1337/api/configs/export-content');
+                    const content = await response.text();
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: 'config.json',
+                        types: [{
+                            description: 'GFM Config',
+                            accept: { 'application/json': ['.json'] }
+                        }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(content);
+                    await writable.close();
+                    showNotification('Config', 'Config saved', 'success', 2500);
+                    fetchConfigs();
+                    return;
+                } catch (e) {
+                    if (e && e.name === 'AbortError') return;
+                    console.error("Error saving config with file picker", e);
+                }
+            }
+            try {
+                await fetch('http://localhost:1337/api/configs/save-dialog');
+                setTimeout(fetchConfigs, 1500);
+            } catch (e) {}
+        }
+
+        async function importConfigDialog() {
+            const input = document.getElementById('config-import-input');
+            input.value = '';
+            input.click();
+        }
+
+        function handleConfigFiles(files) {
+            if (!files || files.length === 0) return;
+            importConfigFile(files[0]);
+        }
+
+        async function importConfigFile(file) {
+            if (!file.name.endsWith('.json')) {
+                showNotification('Invalid File', 'Only .json config files are allowed', 'alert', 3000);
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                const content = event.target.result;
+                try {
+                    await fetch('http://localhost:1337/api/configs/import-content?name=' + encodeURIComponent(file.name), {
+                        method: 'POST',
+                        body: content
+                    });
+                    setTimeout(() => {
+                        fetchConfigs();
+                        loadClientSettings();
+                    }, 500);
+                } catch (err) {
+                    console.error("Error uploading config", err);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        async function importConfigDialogLegacy() {
+            try {
+                await fetch('http://localhost:1337/api/configs/import-dialog');
+                setTimeout(() => {
+                    fetchConfigs();
+                    loadClientSettings();
+                }, 1500);
+            } catch (e) {}
+        }
+
+        function handleConfigDrop(e) {
+            e.preventDefault();
+            document.getElementById('config-drop-zone').style.background = '';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                importConfigFile(files[0]);
+            }
+        }
+
+        async function loadConfig(name) {
+            try {
+                await fetch('http://localhost:1337/api/configs/load?name=' + encodeURIComponent(name));
+                setTimeout(() => {
+                    fetchConfigs();
+                    loadClientSettings();
+                }, 400);
+            } catch (e) {}
+        }
+
+        async function saveConfig(name) {
+            try {
+                await fetch('http://localhost:1337/api/configs/save?name=' + encodeURIComponent(name));
+                setTimeout(fetchConfigs, 400);
+            } catch (e) {}
+        }
+
+        async function renameConfig(name) {
+            const newName = prompt('Enter a new name for the config:', name);
+            if (newName && newName.trim() && newName !== name) {
+                try {
+                    await fetch('http://localhost:1337/api/configs/rename?old=' + encodeURIComponent(name) + '&new=' + encodeURIComponent(newName.trim()));
+                    setTimeout(fetchConfigs, 400);
+                } catch (e) {}
+            }
+        }
+
+        async function deleteConfig(name) {
+            if (confirm('Are you sure you want to delete the config "' + name + '"?')) {
+                try {
+                    await fetch('http://localhost:1337/api/configs/delete?name=' + encodeURIComponent(name));
+                    setTimeout(fetchConfigs, 400);
+                } catch (e) {}
+            }
+        }
+
+        // --- FRIENDS LIST ---
+        async function fetchFriends() {
+            try {
+                const res = await fetch('http://localhost:1337/api/friends');
+                savedFriends = await res.json();
+                renderFriendsList(savedFriends);
+            } catch (e) {
+                console.error("Error loading friends list", e);
+            }
+        }
+
+        function renderFriendsList(friends) {
+            const container = document.getElementById('friends-list-container');
+            container.innerHTML = '';
+            if (friends.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-dim); text-align:center; font-size:11px; padding:10px;">No friends added</div>';
+                return;
+            }
+            friends.forEach(f => {
+                const row = document.createElement('div');
+                row.className = 'friend-row';
+                row.innerHTML = `
+                    <div class="friend-info">
+                        <div class="friend-status-dot ${f.online ? 'online' : 'offline'}"></div>
+                        <span class="friend-ign">${f.name}</span>
+                    </div>
+                    <button class="friend-remove-btn" onclick="removeFriend('${f.name}')">Remove</button>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        async function addFriendFromInput() {
+            const input = document.getElementById('add-friend-name');
+            const name = input.value.trim();
+            if (name) {
+                try {
+                    await fetch('http://localhost:1337/api/friends/add?name=' + encodeURIComponent(name));
+                    input.value = '';
+                    setTimeout(fetchFriends, 400);
+                } catch (e) {}
+            }
+        }
+
+        async function removeFriend(name) {
+            try {
+                await fetch('http://localhost:1337/api/friends/remove?name=' + encodeURIComponent(name));
+                setTimeout(fetchFriends, 400);
+            } catch (e) {}
+        }
+
+        function filterFriendsList(query) {
+            const lower = query.toLowerCase().trim();
+            if (!lower) {
+                renderFriendsList(savedFriends);
+                return;
+            }
+            const filtered = savedFriends.filter(f => f.name.toLowerCase().includes(lower));
+            renderFriendsList(filtered);
+        }
+
+        function filterModules(val) {
+            moduleFilter = val.toLowerCase();
+            if (viewMode === 'panel') renderPanelMode();
+            else renderInitial(currentModules);
+        }
+
+        function openTutorial() {
+            document.getElementById('tutorial-modal').style.display = 'flex';
+        }
+
+        function closeTutorial() {
+            document.getElementById('tutorial-modal').style.display = 'none';
+        }
+
+        function updateProfilePill(modules) {
+            const pill = document.getElementById('profile-pill');
+            if (pill) pill.textContent = `AC: ${antiCheatProfile}`;
+        }
+
+        const GUI_THEMES = {
+            APPLE: {
+                '--a1': '#ffffff',
+                '--a2': '#d9dde5',
+                '--glow': 'rgba(255,255,255,0.12)',
+                '--glass': 'rgba(255,255,255,0.18)',
+                '--glass-2': 'rgba(255,255,255,0.24)',
+                '--glass-inner': 'rgba(255,255,255,0.12)',
+                '--glass-inner-h': 'rgba(255,255,255,0.18)',
+                '--glass-border': 'rgba(255,255,255,0.18)',
+                '--glass-border-dim': 'rgba(255,255,255,0.12)',
+                '--header-bg': 'rgba(255,255,255,0.16)',
+                '--text': '#ffffff',
+                '--text-sec': 'rgba(255,255,255,0.7)',
+                '--text-dim': 'rgba(255,255,255,0.42)',
+                '--on': '#dff7ea',
+                '--off': '#ffd4de',
+                '--on-glow': 'rgba(255,255,255,0.16)',
+                '--font-body': "'Inter', sans-serif",
+                '--font-display': "'Inter', sans-serif",
+                '--radius-panel': '20px',
+                '--radius-pill': '999px'
+            },
+            AMOLED: {
+                '--a1': '#41ff7a',
+                '--a2': '#1d9f49',
+                '--glow': 'rgba(65,255,122,0.12)',
+                '--glass': 'rgba(0,0,0,0.94)',
+                '--glass-2': 'rgba(0,0,0,0.98)',
+                '--glass-inner': 'rgba(65,255,122,0.03)',
+                '--glass-inner-h': 'rgba(65,255,122,0.07)',
+                '--glass-border': 'rgba(65,255,122,0.12)',
+                '--glass-border-dim': 'rgba(65,255,122,0.06)',
+                '--header-bg': 'rgba(0,0,0,1)',
+                '--text': '#dbffe5',
+                '--text-sec': 'rgba(182,255,204,0.72)',
+                '--text-dim': 'rgba(65,255,122,0.42)',
+                '--on': '#41ff7a',
+                '--off': '#ff4d6d',
+                '--on-glow': 'rgba(65,255,122,0.22)',
+                '--font-body': "'JetBrains Mono', monospace",
+                '--font-display': "'JetBrains Mono', monospace",
+                '--radius-panel': '4px',
+                '--radius-pill': '2px'
+            },
+            VALORANT: {
+                '--a1': '#ff4655',
+                '--a2': '#ff7c86',
+                '--glow': 'rgba(255,70,85,0.18)',
+                '--glass': 'rgba(17,19,25,0.9)',
+                '--glass-2': 'rgba(9,10,14,0.98)',
+                '--glass-inner': 'rgba(255,255,255,0.03)',
+                '--glass-inner-h': 'rgba(255,70,85,0.08)',
+                '--glass-border': 'rgba(255,70,85,0.18)',
+                '--glass-border-dim': 'rgba(255,255,255,0.08)',
+                '--header-bg': 'rgba(10,11,16,0.98)',
+                '--text': '#ffffff',
+                '--text-sec': 'rgba(255,255,255,0.72)',
+                '--text-dim': 'rgba(255,70,85,0.5)',
+                '--on': '#9ef0b7',
+                '--off': '#ff4655',
+                '--on-glow': 'rgba(158,240,183,0.2)',
+                '--font-body': "'Inter', sans-serif",
+                '--font-display': "'Inter', sans-serif",
+                '--radius-panel': '0px',
+                '--radius-pill': '0px'
+            },
+            CYBERPUNK: {
+                '--a1': '#D96FD4',
+                '--a2': '#9B45A8',
+                '--glow': 'rgba(217, 111, 212, 0.22)',
+                '--glass': 'rgba(14, 10, 22, 0.85)',
+                '--glass-2': 'rgba(10, 6, 18, 0.92)',
+                '--glass-inner': 'rgba(255,255,255,0.03)',
+                '--glass-inner-h': 'rgba(255,255,255,0.06)',
+                '--glass-border': 'rgba(217, 111, 212, 0.14)',
+                '--glass-border-dim': 'rgba(255,255,255,0.05)',
+                '--header-bg': 'rgba(8, 4, 16, 0.95)',
+                '--text': '#F0EBF8',
+                '--text-sec': '#8B7A9E',
+                '--text-dim': '#3E3050',
+                '--on': '#5FE87A',
+                '--off': '#EF4B6C',
+                '--on-glow': 'rgba(95, 232, 122, 0.3)',
+                '--font-body': "'DM Sans', sans-serif",
+                '--font-display': "'Syne', sans-serif",
+                '--radius-panel': '12px',
+                '--radius-pill': '20px'
+            },
+            VANILLA_PLUS: {
+                '--a1': '#d3b37a',
+                '--a2': '#8bb56d',
+                '--glow': 'rgba(211,179,122,0.16)',
+                '--glass': 'rgba(46, 35, 22, 0.92)',
+                '--glass-2': 'rgba(33, 25, 15, 0.98)',
+                '--glass-inner': 'rgba(255,255,255,0.03)',
+                '--glass-inner-h': 'rgba(211,179,122,0.1)',
+                '--glass-border': 'rgba(211,179,122,0.18)',
+                '--glass-border-dim': 'rgba(255,240,200,0.08)',
+                '--header-bg': 'rgba(34, 26, 16, 0.98)',
+                '--text': '#f8f0da',
+                '--text-sec': '#c4b28c',
+                '--text-dim': '#7f6844',
+                '--on': '#8bb56d',
+                '--off': '#c96b57',
+                '--on-glow': 'rgba(139,181,109,0.2)',
+                '--font-body': "'VT323', monospace",
+                '--font-display': "'VT323', monospace",
+                '--radius-panel': '6px',
+                '--radius-pill': '6px'
+            },
+            GLASS_NEON: {
+                '--a1': '#71f0ff',
+                '--a2': '#d96fd4',
+                '--glow': 'rgba(113,240,255,0.22)',
+                '--glass': 'rgba(20, 16, 34, 0.58)',
+                '--glass-2': 'rgba(14, 10, 28, 0.82)',
+                '--glass-inner': 'rgba(255,255,255,0.05)',
+                '--glass-inner-h': 'rgba(255,255,255,0.09)',
+                '--glass-border': 'rgba(113,240,255,0.18)',
+                '--glass-border-dim': 'rgba(255,255,255,0.08)',
+                '--header-bg': 'rgba(12, 10, 24, 0.94)',
+                '--text': '#f4fbff',
+                '--text-sec': '#9cb8c8',
+                '--text-dim': '#4d6070',
+                '--on': '#7dffb2',
+                '--off': '#ff6b8f',
+                '--on-glow': 'rgba(125,255,178,0.22)',
+                '--font-body': "'Inter', sans-serif",
+                '--font-display': "'Syne', sans-serif",
+                '--radius-panel': '16px',
+                '--radius-pill': '999px'
+            },
+            KRYPTON: {
+                '--a1': '#00e5ff',
+                '--a2': '#0088ff',
+                '--glow': 'rgba(0, 229, 255, 0.25)',
+                '--glass': 'rgba(10, 10, 12, 0.95)',
+                '--glass-2': 'rgba(8, 8, 10, 0.98)',
+                '--glass-border': 'rgba(0, 229, 255, 0.15)',
+                '--header-bg': '#050505',
+                '--text': '#ffffff',
+                '--text-sec': '#d1d1d1',
+                '--on': '#00e5ff',
+                '--off': '#333333',
+                '--on-glow': 'rgba(0, 229, 255, 0.4)',
+                '--font-body': "'JetBrains Mono', monospace",
+                '--font-display': "'VT323', monospace",
+                '--radius-panel': '12px',
+                '--radius-pill': '20px'
+            }
+        };
+
+        function applyGuiTheme(themeName) {
+            guiTheme = String(themeName || 'KRYPTON').toUpperCase();
+            const theme = GUI_THEMES[guiTheme];
+            if (theme) {
+                const root = document.documentElement;
+                Object.entries(theme).forEach(([key, value]) => root.style.setProperty(key, value));
+            }
+            document.body.dataset.theme = guiTheme;
+        }
+
+        // ── View Mode ──
+        function setViewMode(mode) {
+            viewMode = mode;
+            document.getElementById('btn-normal').classList.toggle('active', mode === 'normal');
+            document.getElementById('btn-panel').classList.toggle('active', mode === 'panel');
+            const sc = document.getElementById('settings-container');
+
+            if (mode === 'panel') {
+                document.getElementById('overlay').style.display = 'none';
+                sc.style.display = 'none';
+                renderPanelMode();
+            } else {
+                // Remove panel wrapper if exists
+                const pw = document.getElementById('panel-wrapper');
+                if (pw) pw.remove();
+                document.getElementById('overlay').style.display = 'flex';
+                sc.style.display = 'none';
+                renderInitial(currentModules);
+            }
+        }
+
+        // ── PANEL MODE (single unified panel) ──
+        function renderPanelMode() {
+            let pw = document.getElementById('panel-wrapper');
+            if (pw) pw.remove();
+
+            pw = document.createElement('div');
+            pw.id = 'panel-wrapper';
+            pw.className = 'panel-mode-wrapper';
+
+            const bigPanel = document.createElement('div');
+            bigPanel.className = 'big-panel';
+
+            // 1) Category sidebar
+            let cats = [...new Set(currentModules.map(m => m.category).filter(Boolean))];
+            
+            // If searching, add search virtual category
+            if (moduleFilter) {
+                cats = ['Search Results', ...cats];
+                if (!selectedCategory) selectedCategory = 'Search Results';
+            }
+
+            const catSide = document.createElement('div');
+            catSide.className = 'bp-cats';
+            const catTitle = document.createElement('div');
+            catTitle.className = 'bp-cats-title';
+            catTitle.textContent = 'Categories';
+            catSide.appendChild(catTitle);
+
+            cats.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = 'bp-cat-btn' + (selectedCategory === cat ? ' active' : '');
+                btn.innerHTML = `<span class="cat-dot"></span>${cat}`;
+                btn.onclick = () => {
+                    selectedCategory = cat;
+                    selectedModInPanel = null;
+                    renderPanelMode();
+                };
+                catSide.appendChild(btn);
+            });
+
+            // 2) Module list
+            const modCol = document.createElement('div');
+            modCol.className = 'bp-mods';
+            const modHeader = document.createElement('div');
+            modHeader.className = 'bp-mods-header';
+            modHeader.textContent = selectedCategory || 'Modules';
+            modCol.appendChild(modHeader);
+
+            const modList = document.createElement('div');
+            modList.className = 'bp-mods-list';
+            if (selectedCategory) {
+                let filtered = [];
+                if (selectedCategory === 'Search Results') {
+                    filtered = currentModules.filter(m => m.name.toLowerCase().includes(moduleFilter));
+                } else {
+                    filtered = currentModules.filter(m => m.category === selectedCategory && (!moduleFilter || m.name.toLowerCase().includes(moduleFilter)));
+                }
+
+                filtered.forEach(mod => {
+                    const el = document.createElement('div');
+                    el.className = 'bp-mod-item'
+                        + (mod.enabled ? ' enabled' : '')
+                        + (mod.blocked ? ' blocked' : '')
+                        + (selectedModInPanel === mod.name ? ' selected' : '');
+                    el.innerHTML = `<span class="bp-mod-name">${mod.name}</span><div class="indicator"></div>`;
+                    if (mod.blockReason) el.title = mod.blockReason;
+                    // Left click = toggle
+                    el.onclick = e => {
+                        e.stopPropagation();
+                        toggleModulePanel(mod.name);
+                    };
+                    // Right click = open settings
+                    el.oncontextmenu = e => {
+                        e.preventDefault();
+                        selectedModInPanel = mod.name;
+                        renderPanelMode();
+                    };
+                    modList.appendChild(el);
+                });
+            }
+            modCol.appendChild(modList);
+
+            // 3) Settings column
+            const settCol = document.createElement('div');
+            settCol.className = 'bp-settings';
+            const settHeader = document.createElement('div');
+            settHeader.className = 'bp-settings-header';
+            const settTitle = document.createElement('div');
+            settTitle.className = 'bp-settings-title';
+
+            const selectedMod = selectedModInPanel
+                ? currentModules.find(m => m.name === selectedModInPanel)
+                : null;
+
+            settTitle.textContent = selectedMod ? selectedMod.name : 'Settings';
+            settHeader.appendChild(settTitle);
+            settCol.appendChild(settHeader);
+
+            const settContent = document.createElement('div');
+            settContent.className = 'bp-settings-content';
+
+            if (selectedMod && selectedMod.settings && selectedMod.settings.length > 0) {
+                selectedMod.settings.forEach((s, i) => {
+                    settContent.appendChild(buildSettingEl(selectedMod.name, s));
+                    if (i < selectedMod.settings.length - 1) {
+                        const div = document.createElement('div');
+                        div.className = 'setting-divider';
+                        settContent.appendChild(div);
+                    }
+                });
+            } else {
+                const nosel = document.createElement('div');
+                nosel.className = 'bp-no-sel';
+                nosel.textContent = selectedMod
+                    ? 'No settings available'
+                    : 'Right-click a module to view settings';
+                settContent.appendChild(nosel);
+            }
+            settCol.appendChild(settContent);
+
+            bigPanel.appendChild(catSide);
+            bigPanel.appendChild(modCol);
+            bigPanel.appendChild(settCol);
+            pw.appendChild(bigPanel);
+            document.body.appendChild(pw);
+        }
+
+        function toggleModulePanel(name) {
+            const mod = currentModules.find(m => m.name === name);
+            if (mod?.blocked) {
+                showNotification('Blocked', mod.blockReason || 'Blocked by profile', 'warning', 2200);
+                return;
+            }
+            fetch(`http://localhost:1337/api/toggle?name=${encodeURIComponent(name)}`);
+            if (mod) {
+                mod.enabled = !mod.enabled;
+                renderPanelMode();
+            }
+        }
+
+        // ── Fetch ──
+        async function fetchModules() {
+            if (isListening || pendingUpdate) return;
+            try {
+                const res = await fetch('http://localhost:1337/api/modules');
+                const modules = await res.json();
+                updateModules(modules);
+            } catch (e) {
+                document.getElementById('overlay').innerHTML = '<div style="color:#EF4B6C;padding:20px;font-size:12px;">Error: ' + e.message + '</div>';
+            }
+        }
+
+        function updateModules(modules) {
+            if (!Array.isArray(modules)) return;
+            updateProfilePill(modules);
+            const hudModule = modules.find(m => m.name === 'HUD');
+            const themeSetting = hudModule?.settings?.find(s => s.name === 'Theme')
+                || hudModule?.settings?.find(s => s.name === 'GUI Theme')
+                || hudModule?.settings?.find(s => s.name === 'HUD Theme');
+            applyGuiTheme(themeSetting?.value || 'KRYPTON');
+            if (currentModules.length === 0) {
+                currentModules = modules;
+                if (viewMode === 'panel') renderPanelMode();
+                else renderInitial(modules);
+                return;
+            }
+            currentModules = modules;
+            if (viewMode === 'panel') {
+                if (openModule) {
+                    const updated = modules.find(m => m.name === openModule.name);
+                    if (updated) { openModule = updated; }
+                }
+                renderPanelMode();
+            } else {
+                if (openModule) {
+                    const updated = modules.find(m => m.name === openModule.name);
+                    if (updated) { openModule = updated; refreshSettingsPanel(); }
+                }
+                renderInitial(currentModules);
+            }
+        }
+
+        function renderInitial(modules) {
+            const overlay = document.getElementById('overlay');
+            overlay.innerHTML = '';
+            if (!modules.length) { overlay.innerHTML = '<div style="color:white;padding:20px;opacity:0.4;">No modules</div>'; return; }
+            const categories = [...new Set(modules.map(m => m.category).filter(Boolean))];
+            if (!categories.length) return;
+            categories.forEach(cat => {
+                const catMods = modules.filter(m => m.category === cat && (!moduleFilter || m.name.toLowerCase().includes(moduleFilter)));
+                if (catMods.length === 0) return;
+
+                const panel = document.createElement('div');
+                panel.className = 'panel';
+                const header = document.createElement('div');
+                header.className = 'panel-header';
+                header.innerHTML = `<span class="category-name">${cat}</span>`;
+                const list = document.createElement('div');
+                list.className = 'module-list';
+                catMods.forEach(mod => {
+                    const el = document.createElement('div');
+                    el.className = 'module' + (mod.enabled ? ' enabled' : '') + (mod.blocked ? ' blocked' : '');
+                    el.setAttribute('data-mod', mod.name);
+                    el.innerHTML = `<span class="module-name">${mod.name}</span><div class="indicator"></div>`;
+                    if (mod.blockReason) el.title = mod.blockReason;
+                    el.onclick = e => toggleModule(mod.name, e);
+                    el.oncontextmenu = e => handleRightClick(mod.name, e);
+                    list.appendChild(el);
+                });
+                panel.appendChild(header);
+                panel.appendChild(list);
+                overlay.appendChild(panel);
+            });
+        }
+
+        function toggleModule(name, e) {
+            if (e) e.stopPropagation();
+            const mod = currentModules.find(m => m.name === name);
+            if (mod?.blocked) {
+                showNotification('Blocked', mod.blockReason || 'Blocked by profile', 'warning', 2200);
+                return;
+            }
+            fetch(`http://localhost:1337/api/toggle?name=${encodeURIComponent(name)}`);
+            if (mod) {
+                mod.enabled = !mod.enabled;
+                const el = document.querySelector(`[data-mod="${name}"]`);
+                if (el) el.classList.toggle('enabled', mod.enabled);
+            }
+        }
+
+        function handleRightClick(name, e) {
+            e.preventDefault();
+            const mod = currentModules.find(m => m.name === name);
+            if (!mod) return;
+            openModule = mod;
+            renderSettingsPanel();
+            document.getElementById('settings-container').style.display = 'flex';
+        }
+
+        async function updateSetting(modName, settingName, value) {
+            pendingUpdate = true;
+            try {
+                const res = await fetch(`http://localhost:1337/api/set-setting?mod=${encodeURIComponent(modName)}&setting=${encodeURIComponent(settingName)}&value=${encodeURIComponent(value)}`);
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    const mod = currentModules.find(m => m.name === modName);
+                    if (mod) { const s = mod.settings.find(s => s.name === settingName); if (s) s.value = value; }
+                }
+            } catch (e) {}
+            setTimeout(() => { pendingUpdate = false; fetchModules(); }, 500);
+        }
+
+        async function updateSettingToggle(modName, settingName, current) {
+            await updateSetting(modName, settingName, !current);
+            refreshSettingsPanel();
+        }
+
+        function refreshSettingsPanel() {
+            if (!openModule) return;
+            openModule.settings.forEach(s => {
+                const el = document.getElementById(`setting-${s.name}`);
+                if (!el) return;
+                if (s.type === 'bool') { el.classList.toggle('active', !!s.value); }
+                else if (s.type === 'slider' || s.type === 'slider_double') {
+                    const inp = el.querySelector('input[type=range]');
+                    const val = el.querySelector('.slider-val');
+                    if (inp) inp.value = s.value;
+                    if (val) val.innerText = s.value;
+                } else if (s.type === 'color' || s.type === 'string') {
+                    const inp = el.querySelector('input');
+                    if (inp && inp.value !== s.value) inp.value = s.value;
+                } else if (s.type === 'enum') { el.innerText = s.value; }
+                else if (s.type === 'keybind') {
+                    const btn = el.querySelector('.btn-action');
+                    if (btn && !isListening) btn.innerText = formatKeybindName(s);
+                }
+            });
+        }
+
+        function buildSettingEl(modName, s) {
+            const item = document.createElement('div');
+            item.className = 'setting-item';
+
+            if (s.type === 'bool') {
+                item.innerHTML = `
+                    <div class="setting-row">
+                        <span class="setting-name">${s.name}</span>
+                        <div id="setting-${s.name}" class="toggle-btn ${s.value ? 'active' : ''}" onclick="updateSettingToggle('${modName}','${s.name}',${s.value})">
+                            <div class="toggle-knob"></div>
+                        </div>
+                    </div>`;
+            } else if (s.type === 'slider' || s.type === 'slider_double') {
+                const step = s.type === 'slider_double' ? '0.01' : '1';
+                item.innerHTML = `
+                    <div class="setting-row">
+                        <span class="setting-name">${s.name}</span>
+                        <span class="slider-val">${s.value}</span>
+                    </div>
+                    <div id="setting-${s.name}">
+                        <input type="range" min="${s.min}" max="${s.max}" step="${step}" value="${s.value}"
+                               oninput="this.parentElement.previousElementSibling.querySelector('.slider-val').innerText=this.value"
+                               onchange="updateSetting('${modName}','${s.name}',this.value)">
+                    </div>`;
+            } else if (s.type === 'color') {
+                item.innerHTML = `
+                    <div class="setting-row">
+                        <span class="setting-name">${s.name}</span>
+                        <div id="setting-${s.name}">
+                            <input type="color" class="color-picker-input" value="${s.value}" onchange="updateSetting('${modName}','${s.name}',this.value)">
+                        </div>
+                    </div>`;
+            } else if (s.type === 'string') {
+                item.innerHTML = `
+                    <div class="setting-row"><span class="setting-name">${s.name}</span></div>
+                    <div id="setting-${s.name}">
+                        <input type="text" class="string-input" value="${s.value}" onchange="updateSetting('${modName}','${s.name}',this.value)">
+                    </div>`;
+            } else if (s.type === 'enum') {
+                item.innerHTML = `
+                    <div class="setting-row"><span class="setting-name">${s.name}</span></div>
+                    <div id="setting-${s.name}" class="btn-action" onclick="cycleEnum('${modName}','${s.name}',this)">${s.value}</div>`;
+            } else if (s.type === 'keybind') {
+                item.innerHTML = `
+                    <div class="setting-row"><span class="setting-name">${s.name}</span></div>
+                    <div id="setting-${s.name}">
+                        <div class="keybind-row">
+                            <div class="btn-action ${isListening && listeningSetting === s.name ? 'listening' : ''}" onclick="startListening('${s.name}')">
+                                ${isListening && listeningSetting === s.name ? 'Press key/mouse...' : formatKeybindName(s)}
+                            </div>
+                            <div class="btn-action keybind-clear" onclick="clearKeybind('${modName}','${s.name}')">X</div>
+                        </div>
+                    </div>`;
+            } else if (s.type === 'item_list' || s.type === 'item') {
+                const selected = Array.isArray(s.value) ? s.value : [s.value];
+                const options = s.options || [];
+                item.innerHTML = `
+                    <div class="setting-row"><span class="setting-name">${s.name}</span></div>
+                    <div id="setting-${s.name}">
+                        <input type="text" class="string-input" placeholder="Search blocks..." oninput="filterItemList('${s.name}',this.value)">
+                        <div class="item-list" style="max-height:130px;overflow-y:auto;margin-top:5px;">
+                            ${options.map(opt => `
+                                <div class="item-option ${selected.includes(opt)?'selected':''}" onclick="toggleItem('${modName}','${s.name}','${opt}',this)" data-item="${opt}" style="${selected.includes(opt)?'':'display:none'}">
+                                    <input type="checkbox" ${selected.includes(opt)?'checked':''}> ${opt}
+                                </div>`).join('')}
+                        </div>
+                    </div>`;
+            } else if (s.type === 'slot_list' || s.type === 'inventory') {
+                const selected = Array.isArray(s.value) ? s.value : [];
+                const cols = s.layout?.columns || 9, rows = s.layout?.rows || 3;
+                let g = `<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:3px;margin-top:5px;">`;
+                for (let i = 0; i < cols * rows; i++) {
+                    const sel = selected.includes(i);
+                    g += `<div class="slot-btn${sel?' selected':''}" onclick="toggleSlot('${modName}','${s.name}',${i},this)" style="width:26px;height:26px;background:${sel?'var(--a2)':'rgba(255,255,255,0.06)'};border-radius:4px;border:1px solid ${sel?'var(--glass-border)':'var(--glass-border-dim)'};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--text-dim);">${i+1}</div>`;
+                }
+                g += '</div>';
+                item.innerHTML = `<div class="setting-row"><span class="setting-name">${s.name}</span></div><div id="setting-${s.name}">${g}</div>`;
+            } else if (s.type === 'bedrock_grid') {
+                const bits = s.value || [];
+                let g = `<div style="display:grid;grid-template-columns:repeat(24,7px);gap:1px;margin-top:5px;">`;
+                for (let i = 0; i < 576; i++) {
+                    const x = Math.floor(i/24), z = i%24;
+                    const sel = Array.isArray(bits) && bits.includes(i);
+                    g += `<div onclick="toggleBedrock('${modName}','${s.name}',${x},${z},this)" style="width:7px;height:7px;background:${sel?'var(--a1)':'rgba(255,255,255,0.07)'};cursor:pointer;border-radius:1px;"></div>`;
+                }
+                g += `</div><div class="btn-action" onclick="clearBedrockGrid('${modName}','${s.name}')" style="margin-top:7px;">Clear All</div>`;
+                item.innerHTML = `<div class="setting-row"><span class="setting-name">${s.name}</span></div><div id="setting-${s.name}">${g}</div>`;
+            }
+            return item;
+        }
+
+        function renderSettingsPanel() {
+            if (!openModule) return;
+            document.getElementById('current-mod-name').textContent = openModule.name;
+            const list = document.getElementById('settings-list');
+            list.innerHTML = '';
+            openModule.settings.forEach((s, i) => {
+                list.appendChild(buildSettingEl(openModule.name, s));
+                if (i < openModule.settings.length - 1) {
+                    const div = document.createElement('div');
+                    div.className = 'setting-divider';
+                    list.appendChild(div);
+                }
+            });
+        }
+
+        function filterItemList(settingName, filter) {
+            const list = document.querySelector(`#setting-${settingName} .item-list`);
+            if (!list) return;
+            const raw   = filter.toLowerCase().trim();
+            // Normalize: treat spaces as underscores so "crafting table" matches "crafting_table"
+            const lower = raw.replace(/ /g, '_');
+            const lowerAlt = raw.replace(/_/g, ' '); // also allow underscore-query to match spaces
+            list.querySelectorAll('.item-option').forEach(item => {
+                const name = item.getAttribute('data-item').toLowerCase();
+                const isSelected = item.classList.contains('selected');
+                if (raw === '') {
+                    // Show only selected items when search is empty
+                    item.style.display = isSelected ? 'flex' : 'none';
+                } else {
+                    // Match against the full id (e.g. "minecraft:crafting_table")
+                    // or just the path after the colon (e.g. "crafting_table")
+                    const path = name.includes(':') ? name.split(':')[1] : name;
+                    const matches = name.includes(lower) || name.includes(lowerAlt)
+                                 || path.includes(lower) || path.includes(lowerAlt);
+                    item.style.display = matches ? 'flex' : 'none';
+                }
+            });
+        }
+
+        function toggleItem(modName, settingName, item, el) {
+            el.querySelector('input').checked = !el.querySelector('input').checked;
+            el.classList.toggle('selected');
+            const list = document.querySelector(`#setting-${settingName} .item-list`);
+            const selected = Array.from(list.querySelectorAll('.item-option.selected')).map(o => o.getAttribute('data-item'));
+            updateSetting(modName, settingName, JSON.stringify(selected));
+        }
+
+        function toggleSlot(modName, settingName, slot, el) {
+            const isSel = el.classList.contains('selected');
+            el.classList.toggle('selected');
+            el.style.background = isSel ? 'rgba(255,255,255,0.06)' : 'var(--a2)';
+            const container = document.getElementById(`setting-${settingName}`);
+            const slots = Array.from(container.querySelectorAll('.slot-btn.selected')).map(s => parseInt(s.innerText) - 1);
+            updateSetting(modName, settingName, JSON.stringify(slots));
+        }
+
+        function toggleBedrock(modName, settingName, x, z, el) {
+            const isSel = el.style.background === 'var(--a1)' || el.style.backgroundColor.includes('217');
+            el.style.background = isSel ? 'rgba(255,255,255,0.07)' : 'var(--a1)';
+            updateSetting(modName, settingName, JSON.stringify({x, z, toggle: true}));
+        }
+
+        function clearBedrockGrid(modName, settingName) {
+            document.getElementById(`setting-${settingName}`)
+                .querySelectorAll('[onclick^="toggleBedrock"]')
+                .forEach(c => c.style.background = 'rgba(255,255,255,0.07)');
+            updateSetting(modName, settingName, 'clear');
+        }
+
+        function startListening(settingName) {
+            isListening = true; listeningSetting = settingName;
+            const btn = document.querySelector(`#setting-${settingName} .btn-action`);
+            if (btn) { btn.classList.add('listening'); btn.innerText = 'Press key/mouse...'; }
+        }
+
+        function clearKeybind(modName, settingName) {
+            const setting = openModule?.settings.find(s => s.name === settingName);
+            if (setting) {
+                setting.min = -1;
+                setting.value = 'None';
+            }
+            updateSetting(modName, settingName, '-1');
+            const btn = document.querySelector(`#setting-${settingName} .btn-action`);
+            if (btn) btn.innerText = 'None';
+        }
+
+        window.addEventListener('keydown', e => {
+            if (isListening && openModule) {
+                e.preventDefault();
+                let glfw = -1;
+                
+                if (e.code === 'Escape' || e.key === 'Escape') {
+                    glfw = -1; // Unbind
+                } else if (e.code && e.code.startsWith('Key')) {
+                    glfw = e.code.charCodeAt(3); // 'KeyA' -> 65
+                } else if (e.code && e.code.startsWith('Digit')) {
+                    glfw = e.code.charCodeAt(5); // 'Digit0' -> 48
+                } else {
+                    const map = {
+                        'Enter': 257, 'Tab': 258, 'Backspace': 259, 'Insert': 260, 'Delete': 261,
+                        'ArrowRight': 262, 'ArrowLeft': 263, 'ArrowDown': 264, 'ArrowUp': 265,
+                        'PageUp': 266, 'PageDown': 267, 'Home': 268, 'End': 269,
+                        'CapsLock': 280, 'ScrollLock': 281, 'NumLock': 282, 'PrintScreen': 283, 'Pause': 284,
+                        'ShiftLeft': 340, 'ControlLeft': 341, 'AltLeft': 342, 'OSLeft': 343, 'MetaLeft': 343,
+                        'ShiftRight': 344, 'ControlRight': 345, 'AltRight': 346, 'OSRight': 347, 'MetaRight': 347,
+                        'Space': 32, 'Quote': 39, 'Comma': 44, 'Minus': 45, 'Period': 46, 'Slash': 47,
+                        'Semicolon': 59, 'Equal': 61, 'BracketLeft': 91, 'Backslash': 92, 'BracketRight': 93, 'Backquote': 96
+                    };
+                    if (e.code && map[e.code]) glfw = map[e.code];
+                    else if (e.key && map[e.key]) glfw = map[e.key];
+                    else glfw = e.keyCode; // Fallback to standard JS keycode
+                }
+                
+                const setting = openModule.settings.find(s => s.name === listeningSetting);
+                if (setting) {
+                    setting.min = glfw;
+                    setting.value = glfw === -1 ? 'None' : `KEY_${glfw}`;
+                }
+                updateSetting(openModule.name, listeningSetting, glfw.toString());
+                isListening = false; listeningSetting = null;
+                renderSettingsPanel();
+            }
+        });
+
+        window.addEventListener('mousedown', e => {
+            if (!isListening || !openModule) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const glfw = 1000 + e.button;
+            const setting = openModule.settings.find(s => s.name === listeningSetting);
+            if (setting) {
+                setting.min = glfw;
+                setting.value = `MOUSE${e.button + 1}`;
+            }
+            updateSetting(openModule.name, listeningSetting, glfw.toString());
+            isListening = false; listeningSetting = null;
+            renderSettingsPanel();
+        });
+
+        window.addEventListener('auxclick', e => {
+            if (!isListening || !openModule) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const glfw = 1000 + e.button;
+            const setting = openModule.settings.find(s => s.name === listeningSetting);
+            if (setting) {
+                setting.min = glfw;
+                setting.value = `MOUSE${e.button + 1}`;
+            }
+            updateSetting(openModule.name, listeningSetting, glfw.toString());
+            isListening = false; listeningSetting = null;
+            renderSettingsPanel();
+        });
+
+        function cycleEnum(mod, name, el) {
+            const s = openModule?.settings.find(s => s.name === name);
+            if (!s || !s.options) return;
+            const next = s.options[(s.options.indexOf(s.value) + 1) % s.options.length];
+            updateSetting(mod, name, next); el.innerText = next; s.value = next;
+        }
+
+        window.onclick = e => {
+            const sc = document.getElementById('settings-container');
+            const tutorial = document.getElementById('tutorial-modal');
+            const settingsMod = document.getElementById('settings-modal');
+            if (tutorial.style.display === 'flex' && e.target === tutorial) {
+                closeTutorial();
+                return;
+            }
+            if (settingsMod.style.display === 'flex' && e.target === settingsMod) {
+                closeSettingsModal();
+                return;
+            }
+            if (!sc.contains(e.target) && !e.target.closest('.module') && !e.target.closest('.bp-mod-item')) {
+                sc.style.display = 'none'; openModule = null; isListening = false;
+            }
+        };
+
+        // ── Notifications ──
+        function showNotification(title, message, type = 'info', duration = 3000) {
+            const container = document.getElementById('notification-container');
+            const notif = document.createElement('div');
+            notif.className = `notification ${type}`;
+            notif.innerHTML = `<div class="notification-title">${title}</div><div class="notification-message">${message}</div>`;
+            container.appendChild(notif);
+            setTimeout(() => { notif.classList.add('hiding'); setTimeout(() => notif.remove(), 200); }, duration);
+            notif.onclick = () => { notif.classList.add('hiding'); setTimeout(() => notif.remove(), 200); };
+        }
+        window.showNotification = showNotification;
+
+        async function pollNotifications() {
+            try {
+                const res = await fetch('http://localhost:1337/api/notifications');
+                const notifications = await res.json();
+                notifications.forEach(n => showNotification(n.title, n.message, n.type, n.duration));
+            } catch (e) {}
+        }
+
+        // ── Zoom disabled - using responsive design instead ──
+        // CSS transforms break click coordinates, so we use proper responsive units
+        // The UI auto-scales based on viewport using CSS clamp() and vw/vh units
+
+        // Performance: Slower polling for low-end PCs
+        setInterval(fetchModules, 3000);
+        setInterval(pollNotifications, 1000);
+        fetchModules();
+        pollNotifications();
+        // Apply saved settings (theme, performance mode) immediately on load
+        loadClientSettings();
+    </script>
+</body>
+</html>

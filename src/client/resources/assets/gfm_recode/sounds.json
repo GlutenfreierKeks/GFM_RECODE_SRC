@@ -1,0 +1,20 @@
+{
+  "module_toggle_on": {
+    "category": "master",
+    "sounds": [
+      "gfm_recode:toggle_on"
+    ]
+  },
+  "module_toggle_off": {
+    "category": "master",
+    "sounds": [
+      "gfm_recode:toggle_off"
+    ]
+  },
+  "notification": {
+    "category": "master",
+    "sounds": [
+      "gfm_recode:warning"
+    ]
+  }
+}

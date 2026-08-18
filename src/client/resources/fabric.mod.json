@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "gfm_recode",
+  "version": "1.0-SNAPSHOT",
+  "name": "GFM_RECODE",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/gfm_recode/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-datagen": [
+      "de.glutenfreierkeks.gfm_recode.client.Gfm_recodeDataGenerator"
+    ],
+    "client": [
+      "de.glutenfreierkeks.gfm_recode.client.Gfm_recodeClient"
+    ]
+  },
+  "mixins": [
+    {
+      "config": "gfm_recode.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.18.4",
+    "fabric-api": "*",
+    "minecraft": "1.21.11"
+  }
+}

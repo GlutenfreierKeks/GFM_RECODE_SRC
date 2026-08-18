@@ -1,0 +1,36 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "de.glutenfreierkeks.gfm_recode.mixin.client",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "WorldRendererMixin",
+    "BlockRenderManagerMixin",
+    "GameRendererMixin",
+    "CameraMixin",
+    "MouseMixin",
+    "ClientPlayerEntityMixin",
+    "HandledScreenMixin",
+    "MinecraftClientMixin",
+    "InputMixin",
+    "ChatHudLineMixin",
+    "PlayerListHudMixin",
+    "HeldItemRendererMixin",
+    "InGameHudMixin",
+    "ChatScreenMixin",
+    "ScreenMixin",
+    "WindowMixin",
+    "AbstractTextureAccessor",
+    "GlTextureInvoker",
+    "GlTextureViewInvoker",
+    "HandledScreenAccessor",
+    "MinecraftClientAccessor",
+    "ClientPlayerInteractionManagerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}

@@ -1,0 +1,393 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.guardsquare:proguard-gradle:7.4.2'
+    }
+}
+
+plugins {
+    id 'fabric-loom' version '1.15-SNAPSHOT'
+    id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+loom {
+    splitEnvironmentSourceSets()
+
+    mods {
+        "gfm_recode" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+}
+
+// After clean, dev launch must rebuild client outputs or Fabric crashes (missing build/resources/client).
+tasks.register("prepareModDev") {
+    dependsOn("processResources", "processClientResources", "compileJava", "compileClientJava")
+}
+
+afterEvaluate {
+    tasks.named("runClient").configure {
+        dependsOn("prepareModDev")
+    }
+    tasks.configureEach { task ->
+        if (task.name.contains("devlaunchinjector")) {
+            task.dependsOn("prepareModDev")
+        }
+    }
+}
+
+allprojects {
+    tasks.withType(JavaCompile).configureEach {
+        it.sourceCompatibility = '21'
+        it.targetCompatibility = '21'
+    }
+}
+
+fabricApi {
+    configureDataGeneration {
+        client = true
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url "https://cursemaven.com" }
+}
+
+dependencies {
+    // Minecraft & Fabric
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    modClientImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // MCEF library with Minecraft-native off-screen Chromium rendering.
+    modImplementation "curse.maven:mcef-keksuccinos-fork-1366156:7587812"
+    include "curse.maven:mcef-keksuccinos-fork-1366156:7587812"
+
+    implementation include("io.github.kawaxte:discord-rpc:20230409")
+
+    // imgui-java — app artifact liefert ImGuiNativeLibLoader (laedt natives aus JAR, unabhaengig von java.library.path)
+    implementation include("io.github.spair:imgui-java-binding:1.89.0")
+    implementation include("io.github.spair:imgui-java-lwjgl3:1.89.0")
+    implementation include("io.github.spair:imgui-java-app:1.89.0")
+    runtimeOnly include("io.github.spair:imgui-java-natives-windows:1.89.0")
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "minecraft_version", project.minecraft_version
+    inputs.property "loader_version", project.loader_version
+    filteringCharset "UTF-8"
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version,
+                "minecraft_version": project.minecraft_version,
+                "loader_version": project.loader_version
+    }
+}
+
+def targetJavaVersion = 21
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
+        it.options.release.set(targetJavaVersion)
+    }
+}
+
+java {
+    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    if (JavaVersion.current() < javaVersion) {
+        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    }
+    withSourcesJar()
+}
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${project.archives_base_name}" }
+    }
+}
+
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            artifactId = project.archives_base_name
+            from components.java
+        }
+    }
+    repositories {}
+}
+
+// ─── ProGuard Obfuskierung ───────────────────────────────────────────────────
+task obfuscate(type: proguard.gradle.ProGuardTask, dependsOn: remapJar) {
+    injars  tasks.remapJar.archiveFile
+    outjars "${buildDir}/libs/${archives_base_name}-${version}-obf.jar"
+
+    libraryjars "${System.getProperty('java.home')}/jmods/java.base.jmod"
+    libraryjars "${System.getProperty('java.home')}/jmods/java.desktop.jmod"
+
+    dontshrink
+    dontoptimize
+    dontusemixedcaseclassnames
+    dontwarn
+
+    // Mixins NIE obfuskieren - sonst crasht Fabric
+    keep 'class de.glutenfreierkeks.gfm_recode.mixin.** { *; }'
+
+    // Fabric Entrypoints behalten
+    keep 'class de.glutenfreierkeks.gfm_recode.GfmRecode { *; }'
+    keep 'class de.glutenfreierkeks.gfm_recode.GfmRecodeClient { *; }'
+
+    keepattributes 'RuntimeVisibleAnnotations'
+}
+
+task skidfuscate(type: Exec, dependsOn: obfuscate) {
+    def inputJar  = "${buildDir}/libs/${archives_base_name}-${version}-obf.jar"
+    def outputJar = "${buildDir}/libs/${archives_base_name}-${version}-final.jar"
+    def skidfuscatorJar = "C:\\tools\\skidfuscator.jar" // ← Pfad anpassen
+
+    commandLine 'java', '-jar', skidfuscatorJar,
+            'obfuscate',
+            '--input',  inputJar,
+            '--output', outputJar,
+            '--libs',   "${System.getProperty('java.home')}/jmods"
+}
+
+// ─── Debug Tasks (Bytecode Dump) ─────────────────────────────────────────────
+tasks.register("dumpMethods4") {
+    doLast {
+        def jarPath = "C:\\Users\\glute\\SAFE_GFM\\GFM_RECODE\\.gradle\\loom-cache\\minecraftMaven\\net\\minecraft\\minecraft-clientOnly-8eafcd13e3\\1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2\\minecraft-clientOnly-8eafcd13e3-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2.jar"
+        def zip = new java.util.zip.ZipFile(new File(jarPath))
+        zip.entries().each { entry ->
+            if (entry.name == "net/minecraft/client/gl/RenderPipelines.class" ||
+                    entry.name == "com/mojang/blaze3d/systems/RenderSystem.class") {
+                println "\n=== ${entry.name} ==="
+                def bytes = zip.getInputStream(entry).bytes
+                def str = new String(bytes, "ISO-8859-1")
+                def found = [] as Set
+                def matcher = str =~ /[a-zA-Z_][a-zA-Z0-9_]{3,60}/
+                matcher.each { found << it }
+                found.sort().each { println it }
+            }
+        }
+        zip.close()
+    }
+}
+
+tasks.register("dumpMethods7") {
+    doLast {
+        def jarPath = "C:\\Users\\glute\\SAFE_GFM\\GFM_RECODE\\.gradle\\loom-cache\\minecraftMaven\\net\\minecraft\\minecraft-clientOnly-8eafcd13e3\\1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2\\minecraft-clientOnly-8eafcd13e3-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2.jar"
+        def zip = new java.util.zip.ZipFile(new File(jarPath))
+        ["com/mojang/blaze3d/textures/GpuTexture.class",
+         "com/mojang/blaze3d/textures/GpuTextureView.class",
+         "net/minecraft/client/gl/SimpleFramebuffer.class",
+         "net/minecraft/client/gl/Framebuffer.class"].each { target ->
+            zip.entries().each { entry ->
+                if (entry.name == target) {
+                    println "\n=== ${entry.name} ==="
+                    def bytes = zip.getInputStream(entry).bytes
+                    def str = new String(bytes, "ISO-8859-1")
+                    def found = [] as Set
+                    (str =~ /[a-zA-Z_][a-zA-Z0-9_]{2,50}/).each { found << it }
+                    found.sort().each { println it }
+                }
+            }
+        }
+        zip.close()
+    }
+}
+
+tasks.register("dumpMethods8") {
+    doLast {
+        def jarPath = "C:\\Users\\glute\\SAFE_GFM\\GFM_RECODE\\.gradle\\loom-cache\\minecraftMaven\\net\\minecraft\\minecraft-clientOnly-8eafcd13e3\\1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2\\minecraft-clientOnly-8eafcd13e3-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2.jar"
+        def zip = new java.util.zip.ZipFile(new File(jarPath))
+        ["net/minecraft/client/render/WorldRenderer.class",
+         "net/minecraft/client/render/RenderLayer.class",
+         "net/minecraft/client/MinecraftClient.class",
+         "net/minecraft/client/render/BufferBuilderStorage.class"].each { target ->
+            zip.entries().each { entry ->
+                if (entry.name == target) {
+                    println "\n=== ${entry.name} ==="
+                    def bytes = zip.getInputStream(entry).bytes
+                    def str = new String(bytes, "ISO-8859-1")
+                    def found = [] as Set
+                    (str =~ /[a-zA-Z_][a-zA-Z0-9_]{2,50}/).each { found << it }
+                    found.sort().each { println it }
+                }
+            }
+        }
+        zip.close()
+    }
+}
+
+tasks.register("dumpMethods9") {
+    doLast {
+        def jarPath = "C:\\Users\\glute\\SAFE_GFM\\GFM_RECODE\\.gradle\\loom-cache\\minecraftMaven\\net\\minecraft\\minecraft-clientOnly-8eafcd13e3\\1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2\\minecraft-clientOnly-8eafcd13e3-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2.jar"
+        def zip = new java.util.zip.ZipFile(new File(jarPath))
+        ["net/minecraft/client/render/RenderLayers.class",
+         "net/minecraft/client/render/VertexRendering.class"].each { target ->
+            zip.entries().each { entry ->
+                if (entry.name == target) {
+                    println "\n=== ${entry.name} ==="
+                    def bytes = zip.getInputStream(entry).bytes
+                    def str = new String(bytes, "ISO-8859-1")
+                    def found = [] as Set
+                    (str =~ /[a-zA-Z_][a-zA-Z0-9_]{2,50}/).each { found << it }
+                    found.sort().each { println it }
+                }
+            }
+        }
+        zip.close()
+    }
+}
+
+tasks.register("dumpRenderSystem") {
+    doLast {
+        def jarPath = "C:\\Users\\glute\\SAFE_GFM\\GFM_RECODE\\.gradle\\loom-cache\\minecraftMaven\\net\\minecraft\\minecraft-clientOnly-8eafcd13e3\\1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2\\minecraft-clientOnly-8eafcd13e3-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2.jar"
+        def zip = new java.util.zip.ZipFile(new File(jarPath))
+        zip.entries().each { entry ->
+            if (entry.name == "com/mojang/blaze3d/systems/RenderSystem.class") {
+                println "\n=== RenderSystem fields/methods ==="
+                def bytes = zip.getInputStream(entry).bytes
+                def str = new String(bytes, "ISO-8859-1")
+                def found = [] as Set
+                (str =~ /[a-zA-Z_][a-zA-Z0-9_]{2,60}/).each { found << it }
+                found.sort().each { println it }
+            }
+        }
+        zip.close()
+    }
+}
+
+tasks.register("dumpMethods5") {
+    doLast {
+        def jarPath = "C:\\Users\\glute\\SAFE_GFM\\GFM_RECODE\\.gradle\\loom-cache\\minecraftMaven\\net\\minecraft\\minecraft-clientOnly-8eafcd13e3\\1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2\\minecraft-clientOnly-8eafcd13e3-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2.jar"
+        def zip = new java.util.zip.ZipFile(new File(jarPath))
+        ["com/mojang/blaze3d/systems/CommandEncoder.class",
+         "com/mojang/blaze3d/systems/RenderPass.class",
+         "com/mojang/blaze3d/systems/GpuDevice.class"].each { target ->
+            zip.entries().each { entry ->
+                if (entry.name == target) {
+                    println "\n=== ${entry.name} ==="
+                    def bytes = zip.getInputStream(entry).bytes
+                    def str = new String(bytes, "ISO-8859-1")
+                    def found = [] as Set
+                    (str =~ /[a-zA-Z_][a-zA-Z0-9_]{2,50}/).each { found << it }
+                    found.sort().each { println it }
+                }
+            }
+        }
+        zip.close()
+    }
+}
+
+tasks.register("dumpMethods3") {
+    doLast {
+        def cacheDir = "C:\\Users\\glute\\SAFE_GFM\\GFM_RECODE\\.gradle\\loom-cache\\minecraftMaven\\net\\minecraft"
+        def jars = []
+        new File(cacheDir).eachFileRecurse { f ->
+            if (f.name.endsWith(".jar") && !f.name.endsWith("-sources.jar")) jars << f
+        }
+        jars.each { jarFile ->
+            def zip = new java.util.zip.ZipFile(jarFile)
+            zip.entries().each { entry ->
+                if (entry.name.contains("RenderSystem") || entry.name.contains("RenderPipelines")) {
+                    println "FOUND: ${entry.name} in ${jarFile.name}"
+                }
+            }
+            zip.close()
+        }
+    }
+}
+
+tasks.register("dumpMethods2") {
+    doLast {
+        def cacheDir = "C:\\Users\\glute\\SAFE_GFM\\GFM_RECODE\\.gradle\\loom-cache\\minecraftMaven\\net\\minecraft"
+        def jars = []
+        new File(cacheDir).eachFileRecurse { f ->
+            if (f.name.endsWith(".jar") && !f.name.endsWith("-sources.jar")) jars << f
+        }
+        def urls = jars.collect { it.toURI().toURL() } as java.net.URL[]
+        def loader = new java.net.URLClassLoader(urls, this.class.classLoader)
+        ["com.mojang.blaze3d.systems.RenderSystem",
+         "net.minecraft.client.gl.RenderPipelines"].each { cName ->
+            try {
+                def c = loader.loadClass(cName)
+                println "\nMETHODS IN ${cName}:"
+                c.getDeclaredMethods().each { m -> println "  ${m.name}" }
+                println "FIELDS IN ${cName}:"
+                c.getDeclaredFields().each { f -> println "  ${f.name}" }
+            } catch (Exception e) {
+                println "FAILED: ${cName}: ${e}"
+            }
+        }
+    }
+}
+
+tasks.register("dumpMethods") {
+    doLast {
+        def jarPath = "C:\\Users\\glute\\SAFE_GFM\\GFM_RECODE\\.gradle\\loom-cache\\minecraftMaven\\net\\minecraft\\minecraft-clientOnly-8eafcd13e3\\1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2\\minecraft-clientOnly-8eafcd13e3-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2.jar"
+        def cl = new java.net.URLClassLoader([new File(jarPath).toURI().toURL()] as java.net.URL[], this.class.classLoader)
+        try {
+            def clazz = cl.loadClass("net.minecraft.client.gui.DrawContext")
+            println "=== DrawContext Methods ==="
+            clazz.getDeclaredMethods().each { m ->
+                def types = m.getParameterTypes().collect { it.simpleName }.join(", ")
+                println "${m.name}(${types})"
+            }
+        } catch (Exception e) {
+            println "Failed: " + e
+        }
+    }
+}
+
+tasks.register("dumpRenderClasses") {
+    doLast {
+        def jarPath = "C:\\Users\\glute\\SAFE_GFM\\GFM_RECODE\\.gradle\\loom-cache\\minecraftMaven\\net\\minecraft\\minecraft-clientOnly-8eafcd13e3\\1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2\\minecraft-clientOnly-8eafcd13e3-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2.jar"
+        def zip = new java.util.zip.ZipFile(new File(jarPath))
+        println "=== ALL MATCHING ENTRIES ==="
+        zip.entries().each { entry ->
+            def n = entry.name.toLowerCase()
+            if ((n.contains("commandencoder") || n.contains("renderpass") || n.contains("gpudevice") || n.contains("gputexture")) && n.endsWith(".class")) {
+                println entry.name
+            }
+        }
+        zip.close()
+    }
+}
+
+tasks.register("dumpDrawContext") {
+    doLast {
+        def jarPath = "C:\\Users\\glute\\SAFE_GFM\\GFM_RECODE\\.gradle\\loom-cache\\minecraftMaven\\net\\minecraft\\minecraft-clientOnly-8eafcd13e3\\1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2\\minecraft-clientOnly-8eafcd13e3-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.4-v2.jar"
+        def zip = new java.util.zip.ZipFile(new File(jarPath))
+        ["net/minecraft/client/gui/DrawContext.class",
+         "net/minecraft/client/gl/RenderPipelines.class",
+         "net/minecraft/client/texture/AbstractTexture.class",
+         "com/mojang/blaze3d/systems/RenderSystem.class"].each { target ->
+            zip.entries().each { entry ->
+                if (entry.name == target) {
+                    println "\n=== ${entry.name} ==="
+                    def bytes = zip.getInputStream(entry).bytes
+                    def str = new String(bytes, "ISO-8859-1")
+                    def found = [] as Set
+                    (str =~ /[a-zA-Z_][a-zA-Z0-9_]{2,80}/).each { found << it }
+                    found.sort().each { println it }
+                }
+            }
+        }
+        zip.close()
+    }
+}

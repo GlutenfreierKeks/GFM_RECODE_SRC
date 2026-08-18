@@ -1,2 +1,17 @@
-README.md
-src/
+# Gradle
+.gradle/
+build/
+bin/
+
+# IDE
+.idea/
+.settings/
+.classpath
+.project
+
+# Dev run & temp
+run/
+GFK_SRC/
+temp_mcp/
+net/
+inspiration/
